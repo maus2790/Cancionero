@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1785593446430,
+      "tag": "0000_quick_star_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785714597772,
+      "tag": "0001_gifted_smiling_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785768843046,
+      "tag": "0002_chunky_typhoid_mary",
+      "breakpoints": true
+    }
+  ]
+}

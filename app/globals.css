@@ -1,0 +1,23 @@
+/* app/globals.css */
+@import "tailwindcss";
+
+/* Definir variables de tema personalizadas (opcional) */
+@theme {
+  --color-primary: #3B82F6;
+  --color-primary-dark: #2563EB;
+  --color-secondary: #10B981;
+}
+
+/* Modo oscuro: usar la clase 'dark' en el html */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Estilos base adicionales */
+@layer base {
+  * {
+    @apply border-gray-200 dark:border-gray-700;
+  }
+
+  body {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300;
+  }
+}
