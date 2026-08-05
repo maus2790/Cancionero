@@ -153,7 +153,7 @@ export async function saveSong(formData: FormData) {
                 style: style || null,
                 content,
                 isPublic,
-                updatedAt: new Date(),
+                updatedAt: Math.floor(Date.now() / 1000),
             })
             .where(eq(songs.id, id));
     } else {

@@ -1,71 +1,81 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { GuitarChordDiagram } from '@/components/GuitarChordDiagram';
 import { PianoChordDiagram } from '@/components/PianoChordDiagram';
 import { useTitle } from '@/lib/TitleContext';
-import { Chord } from '@tonaljs/tonal';
+import { getAllChords, deleteChord } from '@/app/actions/chords';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 
 export default function ChordsPage() {
   const { setTitle } = useTitle();
+  const router = useRouter();
   useEffect(() => setTitle('Banco de Acordes'), [setTitle]);
 
   const [view, setView] = useState<'guitar' | 'piano'>('guitar');
   const [search, setSearch] = useState('');
   const [selectedRoot, setSelectedRoot] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [chordsList, setChordsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const chordNames = useMemo(() => {
-    const roots = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const types = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'aug', 'dim'];
-    const list: string[] = [];
-    roots.forEach(root => {
-      types.forEach(type => {
-        const name = root + type;
-        try {
-          const chord = Chord.get(name);
-          if (chord.notes.length > 0) {
-            list.push(name);
-          }
-        } catch { }
-      });
-    });
-    return list;
+  const loadChords = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllChords();
+      setChordsList(data);
+    } catch (error) {
+      console.error('Error loading chords:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadChords();
   }, []);
 
-  const { roots, types } = useMemo(() => {
+  const { roots, types } = (() => {
     const rootSet = new Set<string>();
     const typeSet = new Set<string>();
-    chordNames.forEach(name => {
-      let root = name.charAt(0);
-      if (name.length > 1 && (name[1] === '#' || name[1] === 'b')) {
-        root += name[1];
-      }
-      let type = name.substring(root.length);
-      type = type || 'major';
+    chordsList.forEach(chord => {
+      const root = chord.root || chord.name.charAt(0);
+      const type = chord.type || 'major';
       rootSet.add(root);
       typeSet.add(type);
     });
     return { roots: Array.from(rootSet).sort(), types: Array.from(typeSet).sort() };
-  }, [chordNames]);
+  })();
 
-  const filteredChords = useMemo(() => {
-    return chordNames.filter(name => {
-      let root = name.charAt(0);
-      if (name.length > 1 && (name[1] === '#' || name[1] === 'b')) {
-        root += name[1];
-      }
-      let type = name.substring(root.length);
-      type = type || 'major';
-      const matchesRoot = selectedRoot ? root === selectedRoot : true;
-      const matchesType = selectedType ? type === selectedType : true;
-      const matchesSearch = search ? name.toLowerCase().includes(search.toLowerCase()) : true;
-      return matchesRoot && matchesType && matchesSearch;
-    });
-  }, [chordNames, selectedRoot, selectedType, search]);
+  const filteredChords = chordsList.filter(chord => {
+    const root = chord.root || chord.name.charAt(0);
+    const type = chord.type || 'major';
+    const matchesRoot = selectedRoot ? root === selectedRoot : true;
+    const matchesType = selectedType ? type === selectedType : true;
+    const matchesSearch = search ? chord.name.toLowerCase().includes(search.toLowerCase()) : true;
+    return matchesRoot && matchesType && matchesSearch;
+  });
+
+  const handleDelete = async (id: number, name: string) => {
+    if (confirm(`¿Eliminar el acorde "${name}"?`)) {
+      await deleteChord(id);
+      await loadChords();
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-4 pb-24 sm:pb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Acordes</h2>
+        <button
+          onClick={() => router.push('/acordes/nuevo')}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm"
+        >
+          <Plus className="w-4 h-4" /> Nuevo
+        </button>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-4">
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
           <button
@@ -115,24 +125,65 @@ export default function ChordsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {filteredChords.map(name => (
-          <div key={name} className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 flex flex-col items-center">
-            <span className="text-sm font-bold text-gray-800 dark:text-white mb-1">{name}</span>
-            <div className="w-full flex justify-center">
-              {view === 'guitar' ? (
-                <GuitarChordDiagram chordName={name} width={100} />
-              ) : (
-                <PianoChordDiagram chordName={name} width={180} />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredChords.length === 0 && (
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : filteredChords.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           No se encontraron acordes.
+          <button
+            onClick={() => router.push('/acordes/nuevo')}
+            className="block mx-auto mt-4 text-blue-600 hover:underline"
+          >
+            Crear el primer acorde
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {filteredChords.map(chord => {
+            const positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
+            return (
+              <div
+                key={chord.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 flex flex-col items-center relative group border border-gray-200 dark:border-gray-700"
+              >
+                <span className="text-sm font-bold text-gray-800 dark:text-white mb-1">
+                  {chord.name}
+                </span>
+                <div className="w-full flex justify-center">
+                  {view === 'guitar' ? (
+                    <GuitarChordDiagram
+                      chordName={chord.name}
+                      width={100}
+                      positions={positions}
+                    />
+                  ) : (
+                    <PianoChordDiagram chordName={chord.name} width={180} />
+                  )}
+                </div>
+                <div className="absolute top-1 right-1 flex gap-1">
+                  <button
+                    onClick={() => router.push(`/acordes/editar/${chord.id}`)}
+                    className="p-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 transition"
+                  >
+                    <Edit className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(chord.id, chord.name)}
+                    className="p-1 bg-red-200 dark:bg-red-800 rounded hover:bg-red-300 transition"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-700 dark:text-red-300" />
+                  </button>
+                </div>
+                {chord.isPredefined && (
+                  <span className="absolute top-1 left-1 text-[8px] text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1 rounded">
+                    importado
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
