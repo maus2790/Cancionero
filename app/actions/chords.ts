@@ -5,6 +5,7 @@ import { chords } from '@/db/schema';
 import { eq, and, like, asc, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
+import { uploadImage, deleteImage } from '@/lib/r2';
 
 // Obtener todos los acordes (predefinidos + del usuario) - permite duplicados
 export async function getAllChords() {
@@ -44,51 +45,56 @@ export async function getChordById(id: number) {
     return chord || null;
 }
 
-// Crear un acorde (sin restricción de nombre único)
-export async function createChord(data: {
-    name: string;
-    root?: string;
-    type?: string;
-    guitarPositions?: string;
-    pianoPositions?: string;
-    isPredefined?: boolean;
-}) {
+// Crear un acorde (ahora acepta FormData)
+export async function createChord(formData: FormData) {
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
 
-    // Asegurar valores no vacíos
-    const root = (data.root && data.root.trim()) || data.name.charAt(0) || 'C';
-    const type = (data.type && data.type.trim()) || 'major';
-    const now = Math.floor(Date.now() / 1000); // timestamp en segundos
+    const name = formData.get('name') as string;
+    const root = (formData.get('root') as string) || name.charAt(0) || 'C';
+    const type = (formData.get('type') as string) || 'major';
+    const guitarPositions = formData.get('guitarPositions') as string;
+    const pianoPositions = formData.get('pianoPositions') as string;
+    const imageFile = formData.get('image') as File | null;
 
+    const now = Math.floor(Date.now() / 1000);
+
+    // Primero insertamos el acorde para obtener el ID
     const [newChord] = await db
         .insert(chords)
         .values({
-            name: data.name,
-            root: root,
-            type: type,
-            guitarPositions: data.guitarPositions || null,
-            pianoPositions: data.pianoPositions || null,
+            name,
+            root,
+            type,
+            guitarPositions: guitarPositions || null,
+            pianoPositions: pianoPositions || null,
             userId: user.id,
-            isPredefined: data.isPredefined || false,
+            isPredefined: false,
             createdAt: now,
             updatedAt: now,
         })
         .returning();
 
+    // Si hay imagen, la subimos y actualizamos el registro
+    let imageUrl = null;
+    if (imageFile && imageFile.size > 0) {
+        const extension = imageFile.name.split('.').pop() || 'png';
+        const key = `chords/${newChord.id}-${Date.now()}.${extension}`;
+        imageUrl = await uploadImage(imageFile, key);
+        // Actualizar el acorde con la URL
+        await db
+            .update(chords)
+            .set({ imageUrl, updatedAt: now })
+            .where(eq(chords.id, newChord.id));
+        newChord.imageUrl = imageUrl;
+    }
+
     revalidatePath('/acordes');
     return newChord;
 }
 
-// Actualizar acorde
-export async function updateChord(id: number, data: {
-    name?: string;
-    root?: string;
-    type?: string;
-    guitarPositions?: string;
-    pianoPositions?: string;
-    isPredefined?: boolean;
-}) {
+// Actualizar acorde (ahora acepta FormData)
+export async function updateChord(id: number, formData: FormData) {
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
 
@@ -102,17 +108,42 @@ export async function updateChord(id: number, data: {
         throw new Error('No autorizado');
     }
 
+    const name = formData.get('name') as string;
+    const root = (formData.get('root') as string) || name?.charAt(0) || chord.root || 'C';
+    const type = (formData.get('type') as string) || 'major';
+    const guitarPositions = formData.get('guitarPositions') as string;
+    const pianoPositions = formData.get('pianoPositions') as string;
+    const imageFile = formData.get('image') as File | null;
+    const removeImage = formData.get('removeImage') === 'true';
+
     const updateData: any = {};
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.root !== undefined) {
-        updateData.root = (data.root && data.root.trim()) || data.name?.charAt(0) || chord.root || 'C';
+    if (name) updateData.name = name;
+    if (root) updateData.root = root;
+    if (type) updateData.type = type;
+    if (guitarPositions !== undefined) updateData.guitarPositions = guitarPositions || null;
+    if (pianoPositions !== undefined) updateData.pianoPositions = pianoPositions || null;
+
+    // Manejar imagen
+    let newImageUrl = chord.imageUrl;
+    if (removeImage) {
+        // Eliminar imagen anterior si existe
+        if (chord.imageUrl) {
+            const key = chord.imageUrl.split('/').pop();
+            if (key) await deleteImage(`chords/${key}`);
+        }
+        newImageUrl = null;
+    } else if (imageFile && imageFile.size > 0) {
+        // Eliminar imagen anterior si existe
+        if (chord.imageUrl) {
+            const oldKey = chord.imageUrl.split('/').pop();
+            if (oldKey) await deleteImage(`chords/${oldKey}`);
+        }
+        const extension = imageFile.name.split('.').pop() || 'png';
+        const key = `chords/${id}-${Date.now()}.${extension}`;
+        newImageUrl = await uploadImage(imageFile, key);
     }
-    if (data.type !== undefined) {
-        updateData.type = (data.type && data.type.trim()) || 'major';
-    }
-    if (data.guitarPositions !== undefined) updateData.guitarPositions = data.guitarPositions;
-    if (data.pianoPositions !== undefined) updateData.pianoPositions = data.pianoPositions;
-    if (data.isPredefined !== undefined) updateData.isPredefined = data.isPredefined;
+
+    updateData.imageUrl = newImageUrl;
     updateData.updatedAt = Math.floor(Date.now() / 1000);
 
     const [updated] = await db
@@ -125,7 +156,7 @@ export async function updateChord(id: number, data: {
     return updated;
 }
 
-// Eliminar acorde
+// Eliminar acorde (también eliminar imagen asociada)
 export async function deleteChord(id: number) {
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
@@ -137,6 +168,12 @@ export async function deleteChord(id: number) {
 
     if (!chord) throw new Error('Acorde no encontrado');
     if (chord.userId !== user.id) throw new Error('No autorizado');
+
+    // Eliminar imagen si existe
+    if (chord.imageUrl) {
+        const key = chord.imageUrl.split('/').pop();
+        if (key) await deleteImage(`chords/${key}`);
+    }
 
     await db.delete(chords).where(eq(chords.id, id));
     revalidatePath('/acordes');

@@ -6,7 +6,8 @@ import { GuitarChordDiagram } from '@/components/GuitarChordDiagram';
 import { PianoChordDiagram } from '@/components/PianoChordDiagram';
 import { useTitle } from '@/lib/TitleContext';
 import { getAllChords, deleteChord } from '@/app/actions/chords';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
+import ChordModal from '@/components/ChordModal';
 
 export default function ChordsPage() {
   const { setTitle } = useTitle();
@@ -14,11 +15,12 @@ export default function ChordsPage() {
   useEffect(() => setTitle('Banco de Acordes'), [setTitle]);
 
   const [view, setView] = useState<'guitar' | 'piano'>('guitar');
-  const [search, setSearch] = useState('');
   const [selectedRoot, setSelectedRoot] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [chordsList, setChordsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedChord, setSelectedChord] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const loadChords = async () => {
     setLoading(true);
@@ -48,20 +50,37 @@ export default function ChordsPage() {
     return { roots: Array.from(rootSet).sort(), types: Array.from(typeSet).sort() };
   })();
 
+  // Filtros activos
+  const hasFilters = selectedRoot || selectedType;
+  const activeFilters = [];
+  if (selectedRoot) activeFilters.push({ label: `Nota: ${selectedRoot}`, key: 'root', value: selectedRoot });
+  if (selectedType && selectedType !== 'major') activeFilters.push({ label: `Tipo: ${selectedType}`, key: 'type', value: selectedType });
+
   const filteredChords = chordsList.filter(chord => {
     const root = chord.root || chord.name.charAt(0);
     const type = chord.type || 'major';
     const matchesRoot = selectedRoot ? root === selectedRoot : true;
     const matchesType = selectedType ? type === selectedType : true;
-    const matchesSearch = search ? chord.name.toLowerCase().includes(search.toLowerCase()) : true;
-    return matchesRoot && matchesType && matchesSearch;
+    return matchesRoot && matchesType;
   });
 
-  const handleDelete = async (id: number, name: string) => {
-    if (confirm(`¿Eliminar el acorde "${name}"?`)) {
-      await deleteChord(id);
-      await loadChords();
-    }
+  const handleChordClick = (chord: any) => {
+    setSelectedChord(chord);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteChord = async () => {
+    await loadChords();
+  };
+
+  const clearFilter = (key: 'root' | 'type') => {
+    if (key === 'root') setSelectedRoot('');
+    else setSelectedType('');
+  };
+
+  const clearAllFilters = () => {
+    setSelectedRoot('');
+    setSelectedType('');
   };
 
   return (
@@ -76,6 +95,7 @@ export default function ChordsPage() {
         </button>
       </div>
 
+      {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-4">
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
           <button
@@ -115,16 +135,38 @@ export default function ChordsPage() {
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
-          <input
-            type="text"
-            placeholder="Buscar acorde..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs flex-1 min-w-[100px]"
-          />
         </div>
       </div>
 
+      {/* Chips de filtros activos */}
+      {hasFilters && (
+        <div className="flex flex-wrap gap-2 mb-4 items-center">
+          {activeFilters.map(filter => (
+            <span
+              key={filter.key}
+              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+            >
+              {filter.label}
+              <button
+                onClick={() => clearFilter(filter.key as 'root' | 'type')}
+                className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </span>
+          ))}
+          {activeFilters.length > 1 && (
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+            >
+              Limpiar todos
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Grid de acordes */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -146,12 +188,13 @@ export default function ChordsPage() {
             return (
               <div
                 key={chord.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 flex flex-col items-center relative group border border-gray-200 dark:border-gray-700"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 flex flex-col items-center border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md transition"
+                onClick={() => handleChordClick(chord)}
               >
                 <span className="text-sm font-bold text-gray-800 dark:text-white mb-1">
                   {chord.name}
                 </span>
-                <div className="w-full flex justify-center">
+                <div className="w-full flex justify-center pointer-events-none">
                   {view === 'guitar' ? (
                     <GuitarChordDiagram
                       chordName={chord.name}
@@ -161,20 +204,6 @@ export default function ChordsPage() {
                   ) : (
                     <PianoChordDiagram chordName={chord.name} width={180} />
                   )}
-                </div>
-                <div className="absolute top-1 right-1 flex gap-1">
-                  <button
-                    onClick={() => router.push(`/acordes/editar/${chord.id}`)}
-                    className="p-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 transition"
-                  >
-                    <Edit className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(chord.id, chord.name)}
-                    className="p-1 bg-red-200 dark:bg-red-800 rounded hover:bg-red-300 transition"
-                  >
-                    <Trash2 className="w-3 h-3 text-red-700 dark:text-red-300" />
-                  </button>
                 </div>
                 {chord.isPredefined && (
                   <span className="absolute top-1 left-1 text-[8px] text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1 rounded">
@@ -186,6 +215,14 @@ export default function ChordsPage() {
           })}
         </div>
       )}
+
+      {/* Modal */}
+      <ChordModal
+        chord={selectedChord}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onDelete={handleDeleteChord}
+      />
     </div>
   );
 }

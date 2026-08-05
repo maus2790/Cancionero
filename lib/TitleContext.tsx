@@ -1,6 +1,7 @@
+// lib/TitleContext.tsx
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 type TitleContextType = {
     title: string;
@@ -8,6 +9,7 @@ type TitleContextType = {
     showBack: boolean;
     setShowBack: (show: boolean) => void;
     onBack: () => void;
+    // Recibe la función directamente (no un updater)
     setOnBack: (callback: () => void) => void;
 };
 
@@ -16,11 +18,25 @@ const TitleContext = createContext<TitleContextType | undefined>(undefined);
 export function TitleProvider({ children }: { children: ReactNode }) {
     const [title, setTitle] = useState('Cancionero');
     const [showBack, setShowBack] = useState(false);
-    const [onBack, setOnBack] = useState<() => void>(() => { });
+    // Guardamos la callback dentro de un objeto para que React
+    // no la interprete como un "lazy updater" al llamar setOnBack.
+    const [onBackRef, setOnBackRef] = useState<{ fn: () => void }>({ fn: () => {} });
+
+    // setOnBack envuelve la función en un objeto antes de guardarla
+    const setOnBack = useCallback((callback: () => void) => {
+        setOnBackRef({ fn: callback });
+    }, []);
 
     return (
         <TitleContext.Provider
-            value={{ title, setTitle, showBack, setShowBack, onBack, setOnBack }}
+            value={{
+                title,
+                setTitle,
+                showBack,
+                setShowBack,
+                onBack: onBackRef.fn,
+                setOnBack,
+            }}
         >
             {children}
         </TitleContext.Provider>
