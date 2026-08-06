@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createChord } from '@/app/actions/chords';
 import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
+import { ChordEditorPiano } from '@/components/ChordEditorPiano';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
 import { X } from 'lucide-react';
@@ -12,17 +13,17 @@ export default function NewChordPage() {
     const { setTitle, setShowBack, setOnBack } = useTitle();
     const router = useRouter();
 
-    // Configuramos el header al montar
     useEffect(() => {
         setShowBack(true);
         setOnBack(() => router.push('/acordes'));
         return () => {
             setShowBack(false);
-            setOnBack(() => {});
+            setOnBack(() => { });
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const [activeTab, setActiveTab] = useState<'guitar' | 'piano'>('guitar');
     const [selectedNote, setSelectedNote] = useState('C');
     const [selectedType, setSelectedType] = useState('major');
     const [guitarPositions, setGuitarPositions] = useState<ChordEditorData>({
@@ -30,6 +31,7 @@ export default function NewChordPage() {
         fingers: Array(6).fill(-1),
         baseFret: 1,
     });
+    const [pianoNotes, setPianoNotes] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -68,8 +70,9 @@ export default function NewChordPage() {
         formData.append('name', chordName);
         formData.append('root', selectedNote);
         formData.append('type', selectedType);
-        formData.append('guitarPositions', JSON.stringify(guitarPositions));
-        formData.append('pianoPositions', '[]');
+        formData.append('guitarPositions', activeTab === 'guitar' ? JSON.stringify(guitarPositions) : '');
+        formData.append('pianoPositions', activeTab === 'piano' ? JSON.stringify(pianoNotes) : '');
+        formData.append('imageFolder', activeTab === 'piano' ? 'piano' : 'chords');
         if (imageFile) {
             formData.append('image', imageFile);
         }
@@ -89,8 +92,15 @@ export default function NewChordPage() {
             fingers: Array(6).fill(-1),
             baseFret: 1,
         });
+        setPianoNotes([]);
         setSelectedNote('C');
         setSelectedType('major');
+        removeImage();
+    };
+
+    // Al cambiar de tab, limpiar la imagen seleccionada
+    const handleTabChange = (tab: 'guitar' | 'piano') => {
+        setActiveTab(tab);
         removeImage();
     };
 
@@ -138,9 +148,53 @@ export default function NewChordPage() {
                     </div>
                 </div>
 
+                {/* Tabs Guitarra / Piano */}
+                <div>
+                    <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-4">
+                        <button
+                            type="button"
+                            onClick={() => handleTabChange('guitar')}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'guitar' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                        >
+                            Guitarra
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleTabChange('piano')}
+                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'piano' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                        >
+                            Piano / Teclado
+                        </button>
+                    </div>
+
+                    {activeTab === 'guitar' ? (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Posición en Guitarra
+                            </label>
+                            <ChordEditor
+                                initialPositions={guitarPositions}
+                                onChange={setGuitarPositions}
+                                width={400}
+                            />
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Notas en Piano
+                            </label>
+                            <ChordEditorPiano
+                                initialNotes={pianoNotes}
+                                onChange={setPianoNotes}
+                                width={460}
+                            />
+                        </div>
+                    )}
+                </div>
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Imagen (opcional)
+                        Imagen de {activeTab === 'guitar' ? 'Guitarra' : 'Piano'} (opcional)
                     </label>
                     <div className="flex items-center gap-3">
                         <input
@@ -167,17 +221,6 @@ export default function NewChordPage() {
                     )}
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Posición en Guitarra
-                    </label>
-                    <ChordEditor
-                        initialPositions={guitarPositions}
-                        onChange={setGuitarPositions}
-                        width={400}
-                    />
-                </div>
-
                 <div className="flex gap-3">
                     <button
                         type="submit"
@@ -197,4 +240,4 @@ export default function NewChordPage() {
             </form>
         </div>
     );
-}
+}

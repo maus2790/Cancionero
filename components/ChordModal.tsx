@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Edit, Trash2, Image as ImageIcon } from 'lucide-react';
 import { GuitarChordDiagram } from './GuitarChordDiagram';
+import { PianoChordDiagram } from './PianoChordDiagram';
 import { deleteChord } from '@/app/actions/chords';
 
 interface ChordModalProps {
@@ -11,17 +12,27 @@ interface ChordModalProps {
     isOpen: boolean;
     onClose: () => void;
     onDelete: () => void;
+    initialView?: 'guitar' | 'piano';
 }
 
-export default function ChordModal({ chord, isOpen, onClose, onDelete }: ChordModalProps) {
+export default function ChordModal({ chord, isOpen, onClose, onDelete, initialView = 'guitar' }: ChordModalProps) {
     const router = useRouter();
     const [showImage, setShowImage] = useState(false);
     const [imageError, setImageError] = useState(false);
 
     if (!isOpen || !chord) return null;
 
-    const positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
-    const imageUrl = chord.imageUrl;
+    let positions = null;
+    try {
+        positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
+    } catch {}
+    
+    let pianoNotes: string[] = [];
+    try {
+        pianoNotes = chord.pianoPositions ? JSON.parse(chord.pianoPositions) : [];
+    } catch {}
+    // Imagen correcta segun la vista
+    const imageUrl = initialView === 'piano' ? chord.pianoImageUrl : chord.imageUrl;
 
     const handleDelete = async () => {
         if (confirm(`¿Eliminar el acorde "${chord.name}"?`)) {
@@ -32,7 +43,8 @@ export default function ChordModal({ chord, isOpen, onClose, onDelete }: ChordMo
     };
 
     const handleEdit = () => {
-        router.push(`/acordes/editar/${chord.id}`);
+        const tab = initialView === 'piano' ? '?tab=piano' : '';
+        router.push(`/acordes/editar/${chord.id}${tab}`);
         onClose();
     };
 
@@ -52,13 +64,17 @@ export default function ChordModal({ chord, isOpen, onClose, onDelete }: ChordMo
                     {chord.name}
                 </h2>
 
-                {/* Diagrama más grande */}
+                {/* Diagrama */}
                 <div className="flex justify-center mb-6">
-                    <GuitarChordDiagram
-                        chordName={chord.name}
-                        width={300}
-                        positions={positions}
-                    />
+                    {initialView === 'guitar' ? (
+                        <GuitarChordDiagram
+                            chordName={chord.name}
+                            width={300}
+                            positions={positions}
+                        />
+                    ) : (
+                        <PianoChordDiagram chordName={chord.name} width={340} notes={pianoNotes} />
+                    )}
                 </div>
 
                 {/* Botones de acción */}

@@ -61,7 +61,15 @@ export default function ChordsPage() {
     const type = chord.type || 'major';
     const matchesRoot = selectedRoot ? root === selectedRoot : true;
     const matchesType = selectedType ? type === selectedType : true;
-    return matchesRoot && matchesType;
+
+    const hasGuitar = chord.guitarPositions && chord.guitarPositions !== 'null' && chord.guitarPositions !== '[]' && chord.guitarPositions !== '';
+    const hasPiano = chord.pianoPositions && chord.pianoPositions !== 'null' && chord.pianoPositions !== '[]' && chord.pianoPositions !== '';
+
+    let matchesView = true;
+    if (view === 'guitar') matchesView = !!hasGuitar;
+    if (view === 'piano') matchesView = !!hasPiano;
+
+    return matchesRoot && matchesType && matchesView;
   });
 
   const handleChordClick = (chord: any) => {
@@ -184,7 +192,15 @@ export default function ChordsPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {filteredChords.map(chord => {
-            const positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
+            let positions = null;
+            try {
+              positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
+            } catch {}
+            let pianoNotes: string[] = [];
+            try {
+              pianoNotes = chord.pianoPositions ? JSON.parse(chord.pianoPositions) : [];
+            } catch {}
+
             return (
               <div
                 key={chord.id}
@@ -202,7 +218,11 @@ export default function ChordsPage() {
                       positions={positions}
                     />
                   ) : (
-                    <PianoChordDiagram chordName={chord.name} width={180} />
+                    <PianoChordDiagram 
+                      chordName={chord.name} 
+                      width={180} 
+                      notes={pianoNotes} 
+                    />
                   )}
                 </div>
                 {chord.isPredefined && (
@@ -222,6 +242,7 @@ export default function ChordsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onDelete={handleDeleteChord}
+        initialView={view}
       />
     </div>
   );

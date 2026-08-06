@@ -55,7 +55,8 @@ export const chords = sqliteTable('chords', {
     type: text('type').notNull(),
     guitarPositions: text('guitar_positions'),
     pianoPositions: text('piano_positions'),
-    imageUrl: text('image_url'), // <-- NUEVO CAMPO
+    imageUrl: text('image_url'),       // imagen de guitarra
+    pianoImageUrl: text('piano_image_url'), // imagen de piano
     userId: integer('user_id').references(() => users.id),
     isPredefined: integer('is_predefined', { mode: 'boolean' }).default(false),
     createdAt: integer('created_at').notNull().$default(() => Math.floor(Date.now() / 1000)),

@@ -6,22 +6,24 @@ import { Chord } from '@tonaljs/tonal';
 interface PianoChordDiagramProps {
     chordName: string;
     width?: number;
+    notes?: string[];
 }
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const BLACK_KEYS = ['C#', 'D#', 'F#', 'G#', 'A#'];
 
-export function PianoChordDiagram({ chordName, width = 200 }: PianoChordDiagramProps) {
+export function PianoChordDiagram({ chordName, width = 200, notes }: PianoChordDiagramProps) {
     const chordNotes = useMemo(() => {
+        if (notes && notes.length > 0) return Array.from(new Set(notes));
         try {
             const chord = Chord.get(chordName);
-            const notes = chord.notes.map((n: string) => n.replace(/[0-9]/g, ''));
-            return Array.from(new Set(notes));
+            const genNotes = chord.notes.map((n: string) => n.replace(/[0-9]/g, ''));
+            return Array.from(new Set(genNotes));
         } catch {
             return [];
         }
-    }, [chordName]);
+    }, [chordName, notes]);
 
     const noteSet = new Set(chordNotes);
 

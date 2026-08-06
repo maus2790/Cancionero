@@ -56,6 +56,8 @@ export async function createChord(formData: FormData) {
     const guitarPositions = formData.get('guitarPositions') as string;
     const pianoPositions = formData.get('pianoPositions') as string;
     const imageFile = formData.get('image') as File | null;
+    const imageFolder = (formData.get('imageFolder') as string) || 'chords';
+    const isPianoImage = imageFolder === 'piano';
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -75,18 +77,17 @@ export async function createChord(formData: FormData) {
         })
         .returning();
 
-    // Si hay imagen, la subimos y actualizamos el registro
-    let imageUrl = null;
+    // Si hay imagen, la subimos al campo correcto
     if (imageFile && imageFile.size > 0) {
         const extension = imageFile.name.split('.').pop() || 'png';
-        const key = `chords/${newChord.id}-${Date.now()}.${extension}`;
-        imageUrl = await uploadImage(imageFile, key);
-        // Actualizar el acorde con la URL
-        await db
-            .update(chords)
-            .set({ imageUrl, updatedAt: now })
-            .where(eq(chords.id, newChord.id));
-        newChord.imageUrl = imageUrl;
+        const key = `${imageFolder}/${newChord.id}-${Date.now()}.${extension}`;
+        const uploadedUrl = await uploadImage(imageFile, key);
+        const updateField = isPianoImage
+            ? { pianoImageUrl: uploadedUrl, updatedAt: now }
+            : { imageUrl: uploadedUrl, updatedAt: now };
+        await db.update(chords).set(updateField).where(eq(chords.id, newChord.id));
+        if (isPianoImage) newChord.pianoImageUrl = uploadedUrl;
+        else newChord.imageUrl = uploadedUrl;
     }
 
     revalidatePath('/acordes');
@@ -115,6 +116,8 @@ export async function updateChord(id: number, formData: FormData) {
     const pianoPositions = formData.get('pianoPositions') as string;
     const imageFile = formData.get('image') as File | null;
     const removeImage = formData.get('removeImage') === 'true';
+    const imageFolder = (formData.get('imageFolder') as string) || 'chords';
+    const isPianoImage = imageFolder === 'piano';
 
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -123,27 +126,36 @@ export async function updateChord(id: number, formData: FormData) {
     if (guitarPositions !== undefined) updateData.guitarPositions = guitarPositions || null;
     if (pianoPositions !== undefined) updateData.pianoPositions = pianoPositions || null;
 
-    // Manejar imagen
-    let newImageUrl = chord.imageUrl;
-    if (removeImage) {
-        // Eliminar imagen anterior si existe
-        if (chord.imageUrl) {
-            const key = chord.imageUrl.split('/').pop();
-            if (key) await deleteImage(`chords/${key}`);
+    const publicUrl = process.env.R2_PUBLIC_URL!;
+    const extractKey = (url: string) =>
+        url.startsWith(publicUrl) ? url.slice(publicUrl.length + 1) : url.split('/').slice(-2).join('/');
+
+    // Manejar imagen de guitarra
+    if (!isPianoImage) {
+        if (removeImage) {
+            if (chord.imageUrl) await deleteImage(extractKey(chord.imageUrl));
+            updateData.imageUrl = null;
+        } else if (imageFile && imageFile.size > 0) {
+            if (chord.imageUrl) await deleteImage(extractKey(chord.imageUrl));
+            const ext = imageFile.name.split('.').pop() || 'png';
+            const key = `chords/${id}-${Date.now()}.${ext}`;
+            updateData.imageUrl = await uploadImage(imageFile, key);
         }
-        newImageUrl = null;
-    } else if (imageFile && imageFile.size > 0) {
-        // Eliminar imagen anterior si existe
-        if (chord.imageUrl) {
-            const oldKey = chord.imageUrl.split('/').pop();
-            if (oldKey) await deleteImage(`chords/${oldKey}`);
-        }
-        const extension = imageFile.name.split('.').pop() || 'png';
-        const key = `chords/${id}-${Date.now()}.${extension}`;
-        newImageUrl = await uploadImage(imageFile, key);
     }
 
-    updateData.imageUrl = newImageUrl;
+    // Manejar imagen de piano
+    if (isPianoImage) {
+        if (removeImage) {
+            if (chord.pianoImageUrl) await deleteImage(extractKey(chord.pianoImageUrl));
+            updateData.pianoImageUrl = null;
+        } else if (imageFile && imageFile.size > 0) {
+            if (chord.pianoImageUrl) await deleteImage(extractKey(chord.pianoImageUrl));
+            const ext = imageFile.name.split('.').pop() || 'png';
+            const key = `piano/${id}-${Date.now()}.${ext}`;
+            updateData.pianoImageUrl = await uploadImage(imageFile, key);
+        }
+    }
+
     updateData.updatedAt = Math.floor(Date.now() / 1000);
 
     const [updated] = await db
@@ -169,11 +181,13 @@ export async function deleteChord(id: number) {
     if (!chord) throw new Error('Acorde no encontrado');
     if (chord.userId !== user.id) throw new Error('No autorizado');
 
-    // Eliminar imagen si existe
-    if (chord.imageUrl) {
-        const key = chord.imageUrl.split('/').pop();
-        if (key) await deleteImage(`chords/${key}`);
-    }
+    // Eliminar ambas imágenes si existen
+    const publicUrl = process.env.R2_PUBLIC_URL!;
+    const extractKey = (url: string) =>
+        url.startsWith(publicUrl) ? url.slice(publicUrl.length + 1) : url.split('/').slice(-2).join('/');
+
+    if (chord.imageUrl) await deleteImage(extractKey(chord.imageUrl));
+    if (chord.pianoImageUrl) await deleteImage(extractKey(chord.pianoImageUrl));
 
     await db.delete(chords).where(eq(chords.id, id));
     revalidatePath('/acordes');
