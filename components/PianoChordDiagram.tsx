@@ -1,63 +1,54 @@
 'use client';
 
 import { useMemo, ReactNode } from 'react';
-import { Chord } from '@tonaljs/tonal';
 
 interface PianoChordDiagramProps {
     chordName: string;
     width?: number;
     notes?: string[];
+    startingNote?: string;
 }
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const BLACK_KEYS = ['C#', 'D#', 'F#', 'G#', 'A#'];
 
-export function PianoChordDiagram({ chordName, width = 200, notes }: PianoChordDiagramProps) {
+export function PianoChordDiagram({ chordName, width = 200, notes, startingNote = 'C' }: PianoChordDiagramProps) {
     const chordNotes = useMemo(() => {
         if (notes && notes.length > 0) return Array.from(new Set(notes));
-        try {
-            const chord = Chord.get(chordName);
-            const genNotes = chord.notes.map((n: string) => n.replace(/[0-9]/g, ''));
-            return Array.from(new Set(genNotes));
-        } catch {
-            return [];
-        }
-    }, [chordName, notes]);
+        return [];
+    }, [notes]);
 
     const noteSet = new Set(chordNotes);
 
-    // Rango: C4 (60) a G5 (79) → 1.5 octavas
-    const startMidi = 60;
-    const endMidi = 79;
-
-    const allKeys: { note: string; octave: number; isWhite: boolean; isBlack: boolean }[] = [];
-
-    for (let midi = startMidi; midi <= endMidi; midi++) {
-        const octave = Math.floor(midi / 12) - 1;
-        const noteIndex = midi % 12;
+    const startIndex = NOTES.indexOf(startingNote) !== -1 ? NOTES.indexOf(startingNote) : 0;
+    const octaveNotes: { note: string; isWhite: boolean; isBlack: boolean }[] = [];
+    
+    for (let i = 0; i < 12; i++) {
+        const noteIndex = (startIndex + i) % 12;
         const note = NOTES[noteIndex];
-        const isWhite = WHITE_KEYS.includes(note);
-        const isBlack = BLACK_KEYS.includes(note);
-        if (isWhite || isBlack) {
-            allKeys.push({ note, octave, isWhite, isBlack });
-        }
+        octaveNotes.push({
+            note,
+            isWhite: WHITE_KEYS.includes(note),
+            isBlack: BLACK_KEYS.includes(note)
+        });
     }
 
-    const whiteKeysCount = allKeys.filter(k => k.isWhite).length;
+    const whiteKeysCount = 7;
     const whiteKeyWidth = width / whiteKeysCount;
     const blackKeyWidth = whiteKeyWidth * 0.6;
+    const height = Math.round(width * 0.5);
 
     let x = 0;
     const keys: ReactNode[] = [];
 
-    allKeys.forEach(({ note, octave, isWhite, isBlack }) => {
+    octaveNotes.forEach(({ note, isWhite, isBlack }, i) => {
         const isActive = noteSet.has(note);
 
         if (isWhite) {
             keys.push(
                 <div
-                    key={`white-${note}${octave}`}
+                    key={`white-${note}-${i}`}
                     className="absolute bottom-0 border border-gray-300 dark:border-gray-600 rounded-b"
                     style={{
                         left: x,
@@ -79,7 +70,7 @@ export function PianoChordDiagram({ chordName, width = 200, notes }: PianoChordD
             const blackX = x - blackKeyWidth / 2;
             keys.push(
                 <div
-                    key={`black-${note}${octave}`}
+                    key={`black-${note}-${i}`}
                     className="absolute top-0 rounded-b"
                     style={{
                         left: blackX,
@@ -100,7 +91,7 @@ export function PianoChordDiagram({ chordName, width = 200, notes }: PianoChordD
     });
 
     return (
-        <div className="relative inline-block overflow-hidden" style={{ width, height: 100 }}>
+        <div className="relative inline-block overflow-hidden" style={{ width, height }}>
             {keys}
         </div>
     );

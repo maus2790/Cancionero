@@ -27,9 +27,16 @@ export default function ChordModal({ chord, isOpen, onClose, onDelete, initialVi
         positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
     } catch {}
     
-    let pianoNotes: string[] = [];
+    let pianoData: { startingNote: string, notes: string[] } = { startingNote: 'C', notes: [] };
     try {
-        pianoNotes = chord.pianoPositions ? JSON.parse(chord.pianoPositions) : [];
+        if (chord.pianoPositions) {
+            const parsed = JSON.parse(chord.pianoPositions);
+            if (Array.isArray(parsed)) {
+                pianoData = { startingNote: 'C', notes: parsed };
+            } else if (parsed && typeof parsed === 'object') {
+                pianoData = parsed;
+            }
+        }
     } catch {}
     // Imagen correcta segun la vista
     const imageUrl = initialView === 'piano' ? chord.pianoImageUrl : chord.imageUrl;
@@ -73,7 +80,7 @@ export default function ChordModal({ chord, isOpen, onClose, onDelete, initialVi
                             positions={positions}
                         />
                     ) : (
-                        <PianoChordDiagram chordName={chord.name} width={340} notes={pianoNotes} />
+                        <PianoChordDiagram chordName={chord.name} width={340} notes={pianoData.notes} startingNote={pianoData.startingNote} />
                     )}
                 </div>
 

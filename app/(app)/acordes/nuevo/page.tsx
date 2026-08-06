@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createChord } from '@/app/actions/chords';
 import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
-import { ChordEditorPiano } from '@/components/ChordEditorPiano';
+import { ChordEditorPiano, PianoData } from '@/components/ChordEditorPiano';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
 import { X } from 'lucide-react';
@@ -23,7 +23,10 @@ export default function NewChordPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const [activeTab, setActiveTab] = useState<'guitar' | 'piano'>('guitar');
+    const searchParams = useSearchParams();
+    const [activeTab] = useState<'guitar' | 'piano'>(
+        searchParams.get('tab') === 'piano' ? 'piano' : 'guitar'
+    );
     const [selectedNote, setSelectedNote] = useState('C');
     const [selectedType, setSelectedType] = useState('major');
     const [guitarPositions, setGuitarPositions] = useState<ChordEditorData>({
@@ -31,7 +34,7 @@ export default function NewChordPage() {
         fingers: Array(6).fill(-1),
         baseFret: 1,
     });
-    const [pianoNotes, setPianoNotes] = useState<string[]>([]);
+    const [pianoData, setPianoData] = useState<PianoData>({ startingNote: 'C', notes: [] });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -71,7 +74,7 @@ export default function NewChordPage() {
         formData.append('root', selectedNote);
         formData.append('type', selectedType);
         formData.append('guitarPositions', activeTab === 'guitar' ? JSON.stringify(guitarPositions) : '');
-        formData.append('pianoPositions', activeTab === 'piano' ? JSON.stringify(pianoNotes) : '');
+        formData.append('pianoPositions', activeTab === 'piano' ? JSON.stringify(pianoData) : '');
         formData.append('imageFolder', activeTab === 'piano' ? 'piano' : 'chords');
         if (imageFile) {
             formData.append('image', imageFile);
@@ -87,25 +90,20 @@ export default function NewChordPage() {
     };
 
     const handleClear = () => {
-        setGuitarPositions({
-            barre: null,
-            fingers: Array(6).fill(-1),
-            baseFret: 1,
-        });
-        setPianoNotes([]);
+        if (activeTab === 'guitar') {
+            setGuitarPositions({ barre: null, fingers: Array(6).fill(-1), baseFret: 1 });
+        } else {
+            setPianoData({ startingNote: 'C', notes: [] });
+        }
         setSelectedNote('C');
         setSelectedType('major');
         removeImage();
     };
 
-    // Al cambiar de tab, limpiar la imagen seleccionada
-    const handleTabChange = (tab: 'guitar' | 'piano') => {
-        setActiveTab(tab);
-        removeImage();
-    };
+
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
                 Nuevo Acorde ({chordName})
             </h1>
@@ -148,24 +146,8 @@ export default function NewChordPage() {
                     </div>
                 </div>
 
-                {/* Tabs Guitarra / Piano */}
+                {/* Editor según tab activo */}
                 <div>
-                    <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-4">
-                        <button
-                            type="button"
-                            onClick={() => handleTabChange('guitar')}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'guitar' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                        >
-                            Guitarra
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleTabChange('piano')}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'piano' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                        >
-                            Piano / Teclado
-                        </button>
-                    </div>
 
                     {activeTab === 'guitar' ? (
                         <div>
@@ -184,8 +166,8 @@ export default function NewChordPage() {
                                 Notas en Piano
                             </label>
                             <ChordEditorPiano
-                                initialNotes={pianoNotes}
-                                onChange={setPianoNotes}
+                                initialData={pianoData}
+                                onChange={setPianoData}
                                 width={460}
                             />
                         </div>

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
 
@@ -6,40 +6,38 @@ const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const BLACK_KEYS = ['C#', 'D#', 'F#', 'G#', 'A#'];
 
+export interface PianoData {
+    startingNote: string;
+    notes: string[];
+}
+
 interface ChordEditorPianoProps {
-    initialNotes?: string[];
-    onChange: (notes: string[]) => void;
+    initialData?: PianoData;
+    onChange: (data: PianoData) => void;
     width?: number;
 }
 
-export function ChordEditorPiano({ initialNotes = [], onChange, width = 460 }: ChordEditorPianoProps) {
-    const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set(initialNotes));
+export function ChordEditorPiano({ initialData, onChange, width = 460 }: ChordEditorPianoProps) {
+    const defaultData: PianoData = { startingNote: 'C', notes: [] };
+    const currentData = initialData || defaultData;
+    
+    const [startingNote, setStartingNote] = useState<string>(currentData.startingNote || 'C');
+    const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set(currentData.notes || []));
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        setActiveNotes(new Set(initialNotes));
-    }, [initialNotes.join(',')]);
-
-    const startMidi = 60;
-    const endMidi = 83;
-
-    const allKeys: { note: string; octave: number; isWhite: boolean; isBlack: boolean }[] = [];
-
-    for (let midi = startMidi; midi <= endMidi; midi++) {
-        const octave = Math.floor(midi / 12) - 1;
-        const noteIndex = midi % 12;
-        const note = NOTES[noteIndex];
-        const isWhite = WHITE_KEYS.includes(note);
-        const isBlack = BLACK_KEYS.includes(note);
-        if (isWhite || isBlack) {
-            allKeys.push({ note, octave, isWhite, isBlack });
+        if (initialData) {
+            setStartingNote(initialData.startingNote || 'C');
+            setActiveNotes(new Set(initialData.notes || []));
         }
-    }
+    }, [initialData?.startingNote, (initialData?.notes || []).join(',')]);
 
-    const whiteKeysCount = allKeys.filter(k => k.isWhite).length;
-    const whiteKeyWidth = width / whiteKeysCount;
-    const blackKeyWidth = whiteKeyWidth * 0.62;
-    const height = Math.round(whiteKeyWidth * 4.5);
+    const handleStartingNoteChange = (newStart: string) => {
+        setStartingNote(newStart);
+        // Opcional: limpiar las notas activas si el usuario cambia la octava, o mantenerlas.
+        // Las mantendremos para no borrar su trabajo accidentalmente.
+        onChange({ startingNote: newStart, notes: Array.from(activeNotes) });
+    };
 
     const toggleNote = (note: string) => {
         const next = new Set(activeNotes);
@@ -49,20 +47,38 @@ export function ChordEditorPiano({ initialNotes = [], onChange, width = 460 }: C
             next.add(note);
         }
         setActiveNotes(next);
-        onChange(Array.from(next));
+        onChange({ startingNote, notes: Array.from(next) });
     };
+
+    const startIndex = NOTES.indexOf(startingNote);
+    const octaveNotes: { note: string; isWhite: boolean; isBlack: boolean }[] = [];
+    
+    for (let i = 0; i < 12; i++) {
+        const noteIndex = (startIndex + i) % 12;
+        const note = NOTES[noteIndex];
+        octaveNotes.push({
+            note,
+            isWhite: WHITE_KEYS.includes(note),
+            isBlack: BLACK_KEYS.includes(note)
+        });
+    }
+
+    const whiteKeysCount = 7; // Una octava de 12 semitonos siempre tiene 7 teclas blancas
+    const whiteKeyWidth = width / whiteKeysCount;
+    const blackKeyWidth = whiteKeyWidth * 0.62;
+    const height = Math.round(whiteKeyWidth * 4.5);
 
     let x = 0;
     const whiteKeyElements: ReactNode[] = [];
     const blackKeyElements: ReactNode[] = [];
 
-    allKeys.forEach(({ note, octave, isWhite, isBlack }) => {
+    octaveNotes.forEach(({ note, isWhite, isBlack }, i) => {
         const isActive = activeNotes.has(note);
 
         if (isWhite) {
             whiteKeyElements.push(
                 <div
-                    key={`white-${note}${octave}`}
+                    key={`white-${note}-${i}`}
                     onClick={() => toggleNote(note)}
                     className="absolute bottom-0 border border-gray-300 dark:border-gray-500 rounded-b cursor-pointer select-none transition-colors"
                     style={{
@@ -89,7 +105,7 @@ export function ChordEditorPiano({ initialNotes = [], onChange, width = 460 }: C
             const blackX = x - blackKeyWidth / 2;
             blackKeyElements.push(
                 <div
-                    key={`black-${note}${octave}`}
+                    key={`black-${note}-${i}`}
                     onClick={() => toggleNote(note)}
                     className="absolute top-0 rounded-b cursor-pointer select-none transition-colors"
                     style={{
@@ -118,6 +134,19 @@ export function ChordEditorPiano({ initialNotes = [], onChange, width = 460 }: C
 
     return (
         <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm text-gray-600 dark:text-gray-400">Nota inicial del teclado:</label>
+                <select
+                    value={startingNote}
+                    onChange={(e) => handleStartingNoteChange(e.target.value)}
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                >
+                    {NOTES.map(note => (
+                        <option key={`start-${note}`} value={note}>{note}</option>
+                    ))}
+                </select>
+            </div>
+
             <div
                 className="relative overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900"
                 style={{ width, height }}
@@ -147,7 +176,7 @@ export function ChordEditorPiano({ initialNotes = [], onChange, width = 460 }: C
                 {noteList.length > 0 && (
                     <button
                         type="button"
-                        onClick={() => { setActiveNotes(new Set()); onChange([]); }}
+                        onClick={() => { setActiveNotes(new Set()); onChange({ startingNote, notes: [] }); }}
                         className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1"
                     >
                         Limpiar todo

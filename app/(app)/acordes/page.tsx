@@ -96,7 +96,7 @@ export default function ChordsPage() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Acordes</h2>
         <button
-          onClick={() => router.push('/acordes/nuevo')}
+          onClick={() => router.push(`/acordes/nuevo?tab=${view}`)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm"
         >
           <Plus className="w-4 h-4" /> Nuevo
@@ -104,8 +104,10 @@ export default function ChordsPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-4">
-        <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+      {/* Filtros */}
+      <div className="flex flex-row justify-between items-center gap-3 mb-4 overflow-x-auto">
+        {/* Botones Guitarra / Teclado (izquierda) */}
+        <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex-shrink-0">
           <button
             onClick={() => setView('guitar')}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${view === 'guitar' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'
@@ -122,13 +124,14 @@ export default function ChordsPage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2 flex-1">
+        {/* Selects (derecha) */}
+        <div className="flex flex-nowrap gap-2 flex-shrink-0">
           <select
             value={selectedRoot}
             onChange={e => setSelectedRoot(e.target.value)}
-            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs"
+            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs min-w-0 max-w-[100px]"
           >
-            <option value="">Todas las notas</option>
+            <option value="">Notas</option>
             {roots.map(root => (
               <option key={root} value={root}>{root}</option>
             ))}
@@ -136,9 +139,9 @@ export default function ChordsPage() {
           <select
             value={selectedType}
             onChange={e => setSelectedType(e.target.value)}
-            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs"
+            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs min-w-0 max-w-[100px]"
           >
-            <option value="">Todos los tipos</option>
+            <option value="">Tipos</option>
             {types.map(type => (
               <option key={type} value={type}>{type}</option>
             ))}
@@ -183,7 +186,7 @@ export default function ChordsPage() {
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           No se encontraron acordes.
           <button
-            onClick={() => router.push('/acordes/nuevo')}
+            onClick={() => router.push(`/acordes/nuevo?tab=${view}`)}
             className="block mx-auto mt-4 text-blue-600 hover:underline"
           >
             Crear el primer acorde
@@ -195,11 +198,18 @@ export default function ChordsPage() {
             let positions = null;
             try {
               positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
-            } catch {}
-            let pianoNotes: string[] = [];
+            } catch { }
+            let pianoData: { startingNote: string, notes: string[] } = { startingNote: 'C', notes: [] };
             try {
-              pianoNotes = chord.pianoPositions ? JSON.parse(chord.pianoPositions) : [];
-            } catch {}
+              if (chord.pianoPositions) {
+                const parsed = JSON.parse(chord.pianoPositions);
+                if (Array.isArray(parsed)) {
+                  pianoData = { startingNote: 'C', notes: parsed };
+                } else if (parsed && typeof parsed === 'object') {
+                  pianoData = parsed;
+                }
+              }
+            } catch { }
 
             return (
               <div
@@ -207,21 +217,22 @@ export default function ChordsPage() {
                 className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 flex flex-col items-center border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md transition"
                 onClick={() => handleChordClick(chord)}
               >
-                <span className="text-sm font-bold text-gray-800 dark:text-white mb-1">
+                <span className="text-lg font-bold text-gray-800 dark:text-white mb-2">
                   {chord.name}
                 </span>
                 <div className="w-full flex justify-center pointer-events-none">
                   {view === 'guitar' ? (
                     <GuitarChordDiagram
                       chordName={chord.name}
-                      width={100}
+                      width={120}
                       positions={positions}
                     />
                   ) : (
-                    <PianoChordDiagram 
-                      chordName={chord.name} 
-                      width={180} 
-                      notes={pianoNotes} 
+                    <PianoChordDiagram
+                      chordName={chord.name}
+                      width={180}
+                      notes={pianoData.notes}
+                      startingNote={pianoData.startingNote}
                     />
                   )}
                 </div>
