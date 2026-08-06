@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createChord } from '@/app/actions/chords';
 import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
@@ -9,9 +9,10 @@ import { useTitle } from '@/lib/TitleContext';
 import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
 import { X } from 'lucide-react';
 
-export default function NewChordPage() {
+function NewChordForm() {
     const { setTitle, setShowBack, setOnBack } = useTitle();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         setShowBack(true);
@@ -23,7 +24,6 @@ export default function NewChordPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const searchParams = useSearchParams();
     const [activeTab] = useState<'guitar' | 'piano'>(
         searchParams.get('tab') === 'piano' ? 'piano' : 'guitar'
     );
@@ -100,8 +100,6 @@ export default function NewChordPage() {
         removeImage();
     };
 
-
-
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
@@ -148,7 +146,6 @@ export default function NewChordPage() {
 
                 {/* Editor según tab activo */}
                 <div>
-
                     {activeTab === 'guitar' ? (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -222,4 +219,12 @@ export default function NewChordPage() {
             </form>
         </div>
     );
-}
+}
+
+export default function NewChordPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>}>
+            <NewChordForm />
+        </Suspense>
+    );
+}
