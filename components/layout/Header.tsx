@@ -11,7 +11,7 @@ import { useTitle } from '@/lib/TitleContext';
 export function Header() {
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
-    const { title, showBack, onBack } = useTitle();
+    const { title, showBack, onBack, headerRight } = useTitle();
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [userName, setUserName] = useState('Usuario');
     const menuRef = useRef<HTMLDivElement>(null);
@@ -75,6 +75,11 @@ export function Header() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {headerRight && (
+                        <div className="flex items-center">
+                            {headerRight}
+                        </div>
+                    )}
                     <button
                         onClick={toggleTheme}
                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"

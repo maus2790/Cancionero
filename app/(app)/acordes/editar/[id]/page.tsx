@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getChordById, updateChord } from '@/app/actions/chords';
 import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
 import { ChordEditorPiano, PianoData } from '@/components/ChordEditorPiano';
+import { ImageDropCrop } from '@/components/ImageDropCrop';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
-import { X } from 'lucide-react';
 
 export default function EditChordPage() {
     const { id } = useParams();
@@ -26,7 +26,7 @@ export default function EditChordPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [chord, setChord] = useState<any>(null);
-    const [activeTab] = useState<'guitar' | 'piano'>(
+    const [activeTab, setActiveTab] = useState<'guitar' | 'piano'>(
         searchParams.get('tab') === 'piano' ? 'piano' : 'guitar'
     );
 
@@ -37,17 +37,15 @@ export default function EditChordPage() {
     });
     const [pianoData, setPianoData] = useState<PianoData>({ startingNote: 'C', notes: [] });
 
-    // Estado de imagen para GUITARRA
+    // Imagen: el File recortado que se subirá
     const [guitarImageFile, setGuitarImageFile] = useState<File | null>(null);
-    const [guitarImagePreview, setGuitarImagePreview] = useState<string | null>(null);
-    const [removeGuitarImage, setRemoveGuitarImage] = useState(false);
-    const guitarFileRef = useRef<HTMLInputElement>(null);
-
-    // Estado de imagen para PIANO
     const [pianoImageFile, setPianoImageFile] = useState<File | null>(null);
-    const [pianoImagePreview, setPianoImagePreview] = useState<string | null>(null);
+    // Flag para indicar al servidor que elimine la imagen
+    const [removeGuitarImage, setRemoveGuitarImage] = useState(false);
     const [removePianoImage, setRemovePianoImage] = useState(false);
-    const pianoFileRef = useRef<HTMLInputElement>(null);
+    // URLs de imágenes ya guardadas (para mostrar en el drop zone)
+    const [guitarSavedUrl, setGuitarSavedUrl] = useState<string | null>(null);
+    const [pianoSavedUrl, setPianoSavedUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const loadChord = async () => {
@@ -75,9 +73,8 @@ export default function EditChordPage() {
                             }
                         } catch { }
                     }
-                    // Pre-cargar previews de imagenes guardadas
-                    if (data.imageUrl) setGuitarImagePreview(data.imageUrl);
-                    if (data.pianoImageUrl) setPianoImagePreview(data.pianoImageUrl);
+                    if (data.imageUrl) setGuitarSavedUrl(data.imageUrl);
+                    if (data.pianoImageUrl) setPianoSavedUrl(data.pianoImageUrl);
                 }
             } catch {
                 setError('No se pudo cargar el acorde');
@@ -91,48 +88,11 @@ export default function EditChordPage() {
     const chordName = getChordName(selectedNote, selectedType);
     useEffect(() => { setTitle(`Editar Acorde (${chordName})`); }, [setTitle, chordName]);
 
-    const handleGuitarImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setGuitarImageFile(file);
-            setRemoveGuitarImage(false);
-            const reader = new FileReader();
-            reader.onload = (ev) => setGuitarImagePreview(ev.target?.result as string);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handlePianoImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setPianoImageFile(file);
-            setRemovePianoImage(false);
-            const reader = new FileReader();
-            reader.onload = (ev) => setPianoImagePreview(ev.target?.result as string);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const clearGuitarImage = () => {
-        setGuitarImageFile(null);
-        setGuitarImagePreview(null);
-        setRemoveGuitarImage(true);
-        if (guitarFileRef.current) guitarFileRef.current.value = '';
-    };
-
-    const clearPianoImage = () => {
-        setPianoImageFile(null);
-        setPianoImagePreview(null);
-        setRemovePianoImage(true);
-        if (pianoFileRef.current) pianoFileRef.current.value = '';
-    };
-
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setSaving(true);
         setError('');
 
-        // Guardamos primero la actualizacion de posiciones + imagen del tab activo
         const imageFile = activeTab === 'guitar' ? guitarImageFile : pianoImageFile;
         const removeImageFlag = activeTab === 'guitar' ? removeGuitarImage : removePianoImage;
 
@@ -140,8 +100,8 @@ export default function EditChordPage() {
         formData.append('name', chordName);
         formData.append('root', selectedNote);
         formData.append('type', selectedType);
-        formData.append('guitarPositions', activeTab === 'guitar' ? JSON.stringify(guitarPositions) : (chord?.guitarPositions || ''));
-        formData.append('pianoPositions', activeTab === 'piano' ? JSON.stringify(pianoData) : (chord?.pianoPositions || ''));
+        formData.append('guitarPositions', JSON.stringify(guitarPositions));
+        formData.append('pianoPositions', JSON.stringify(pianoData));
         formData.append('imageFolder', activeTab === 'piano' ? 'piano' : 'chords');
         if (imageFile) formData.append('image', imageFile);
         if (removeImageFlag) formData.append('removeImage', 'true');
@@ -171,9 +131,6 @@ export default function EditChordPage() {
 
     if (!chord) return <div className="text-center py-12 text-red-500">Acorde no encontrado</div>;
 
-    const currentImagePreview = activeTab === 'guitar' ? guitarImagePreview : pianoImagePreview;
-    const hasCurrentSavedImage = activeTab === 'guitar' ? !!chord.imageUrl : !!chord.pianoImageUrl;
-
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 pb-24">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
@@ -184,8 +141,9 @@ export default function EditChordPage() {
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Fila: Nota + Tipo */}
+                <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nota *</label>
                         <select value={selectedNote} onChange={(e) => setSelectedNote(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800">
@@ -200,47 +158,72 @@ export default function EditChordPage() {
                     </div>
                 </div>
 
-                {/* Editor según tab activo */}
-                <div>
-
-                    {activeTab === 'guitar' ? (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Posicion en Guitarra</label>
-                            <ChordEditor key={chord.id} initialPositions={guitarPositions} onChange={setGuitarPositions} width={400} />
-                        </div>
-                    ) : (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notas en Piano</label>
-                            <ChordEditorPiano key={`piano-${chord.id}`} initialData={pianoData} onChange={setPianoData} width={460} />
-                        </div>
-                    )}
-                </div>
-
-                {/* Imagen segun tab activo */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Imagen de {activeTab === 'guitar' ? 'Guitarra' : 'Piano'}
-                    </label>
-                    <div className="flex items-center gap-3">
-                        {activeTab === 'guitar' ? (
-                            <input ref={guitarFileRef} type="file" accept="image/*" onChange={handleGuitarImageChange} className="flex-1 text-sm border rounded-lg p-2 bg-white dark:bg-gray-800" />
-                        ) : (
-                            <input ref={pianoFileRef} type="file" accept="image/*" onChange={handlePianoImageChange} className="flex-1 text-sm border rounded-lg p-2 bg-white dark:bg-gray-800" />
-                        )}
-                        {(currentImagePreview || hasCurrentSavedImage) && (
-                            <button type="button" onClick={activeTab === 'guitar' ? clearGuitarImage : clearPianoImage} className="p-1 text-red-500 hover:text-red-700">
-                                <X className="w-5 h-5" />
+                {/* Diagrama + Imagen lado a lado en desktop, apilado en móvil */}
+                <div className="flex flex-col md:flex-row gap-4 items-start">
+                    {/* Diagrama */}
+                    <div className="w-full md:flex-1 min-w-0">
+                        {/* Tabs de Instrumento */}
+                        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-4 w-fit">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('guitar')}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === 'guitar' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                            >
+                                Guitarra
                             </button>
-                        )}
-                    </div>
-                    {currentImagePreview && (
-                        <div className="mt-2">
-                            <img src={currentImagePreview} alt="Vista previa" className="max-h-32 rounded" />
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('piano')}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === 'piano' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                            >
+                                Piano
+                            </button>
                         </div>
-                    )}
-                    {!currentImagePreview && hasCurrentSavedImage && (
-                        <div className="mt-2 text-sm text-gray-500">Imagen actual guardada</div>
-                    )}
+
+                        <div className={activeTab === 'guitar' ? 'block' : 'hidden'}>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Posicion en Guitarra</label>
+                                <ChordEditor key={chord.id} initialPositions={guitarPositions} onChange={setGuitarPositions} width={400} />
+                            </div>
+                        </div>
+                        <div className={activeTab === 'piano' ? 'block' : 'hidden'}>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notas en Piano</label>
+                                <ChordEditorPiano key={`piano-${chord.id}`} initialData={pianoData} onChange={setPianoData} width={460} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Imagen drag & drop con recorte */}
+                    <div className="w-full md:w-80 shrink-0">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Imagen (opcional)
+                        </label>
+                        <div className={activeTab === 'guitar' ? 'block' : 'hidden'}>
+                            <ImageDropCrop
+                                key={`guitar-img-${chord?.id}`}
+                                type="guitar"
+                                savedImageUrl={guitarSavedUrl}
+                                onCroppedFile={(file) => {
+                                    setGuitarImageFile(file);
+                                    if (!file) setRemoveGuitarImage(true);
+                                }}
+                                onRemove={() => setRemoveGuitarImage(true)}
+                            />
+                        </div>
+                        <div className={activeTab === 'piano' ? 'block' : 'hidden'}>
+                            <ImageDropCrop
+                                key={`piano-img-${chord?.id}`}
+                                type="piano"
+                                savedImageUrl={pianoSavedUrl}
+                                onCroppedFile={(file) => {
+                                    setPianoImageFile(file);
+                                    if (!file) setRemovePianoImage(true);
+                                }}
+                                onRemove={() => setRemovePianoImage(true)}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex gap-3">

@@ -10,9 +10,12 @@ import { Plus, X } from 'lucide-react';
 import ChordModal from '@/components/ChordModal';
 
 export default function ChordsPage() {
-  const { setTitle } = useTitle();
+  const { setTitle, setShowBack } = useTitle();
   const router = useRouter();
-  useEffect(() => setTitle('Banco de Acordes'), [setTitle]);
+  useEffect(() => {
+      setTitle('Banco de Acordes');
+      setShowBack(false);
+  }, [setTitle, setShowBack]);
 
   const [view, setView] = useState<'guitar' | 'piano'>('guitar');
   const [selectedRoot, setSelectedRoot] = useState('');
@@ -93,15 +96,6 @@ export default function ChordsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-4 pb-24 sm:pb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Acordes</h2>
-        <button
-          onClick={() => router.push(`/acordes/nuevo?tab=${view}`)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm"
-        >
-          <Plus className="w-4 h-4" /> Nuevo
-        </button>
-      </div>
 
       {/* Filtros */}
       {/* Filtros */}
@@ -246,6 +240,14 @@ export default function ChordsPage() {
           })}
         </div>
       )}
+
+      {/* Botón flotante para nuevo acorde */}
+      <button
+        onClick={() => router.push(`/acordes/nuevo?tab=${view}`)}
+        className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       {/* Modal */}
       <ChordModal

@@ -23,7 +23,12 @@ export const generateImageKey = (chordId: number, extension: string = 'png') => 
     return `acordes/${chordId}-${hash}.${extension}`;
 };
 
-export async function uploadImage(file: File, key: string): Promise<string> {
+export const generateAudioKey = (songId: number, extension: string = 'mp3') => {
+    const hash = crypto.randomBytes(16).toString('hex');
+    return `music/${songId}-${hash}.${extension}`;
+};
+
+export async function uploadFile(file: File, key: string): Promise<string> {
     const buffer = Buffer.from(await file.arrayBuffer());
     const command = new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
@@ -33,17 +38,20 @@ export async function uploadImage(file: File, key: string): Promise<string> {
         CacheControl: 'public, max-age=31536000',
     });
     await s3Client.send(command);
-    // Retorna la URL pública
     return `${R2_PUBLIC_URL}/${key}`;
 }
 
-export async function deleteImage(key: string) {
+export const uploadImage = uploadFile;
+
+export async function deleteFile(key: string) {
     const command = new DeleteObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: key,
     });
     await s3Client.send(command);
 }
+
+export const deleteImage = deleteFile;
 
 // Opcional: generar URL firmada para imágenes privadas
 export async function getSignedImageUrl(key: string, expiresIn: number = 3600) {

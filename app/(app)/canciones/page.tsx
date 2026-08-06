@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSongs, getArtists, getStyles } from '@/app/actions/songs';
-import { Search, Plus, Heart, Filter, X, ListPlus } from 'lucide-react';
+import { getSongs, getArtists, getStyles, toggleFavorite } from '@/app/actions/songs';
+import { Search, Plus, Heart, Filter, X, ListPlus, Play, Pause } from 'lucide-react';
 import Link from 'next/link';
 import { AddToSetlistModal } from '@/components/AddToSetlistModal';
 import { getUserSetlists } from '@/app/actions/setlists';
+import { SongCard } from '@/components/SongCard';
+import { useTitle } from '@/lib/TitleContext';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const STYLES = ['Adoración', 'Gozo', 'Contemporánea', 'Balada', 'Ritmo', 'Tradicional', 'Otro'];
@@ -14,6 +16,7 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function SongsPage() {
     const router = useRouter();
+    const { setTitle, setShowBack } = useTitle();
     const [songs, setSongs] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
@@ -31,7 +34,14 @@ export default function SongsPage() {
     const [selectedSongId, setSelectedSongId] = useState<number | null>(null);
     const [selectedSongTitle, setSelectedSongTitle] = useState('');
     const filterRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [playingId, setPlayingId] = useState<number | null>(null);
     const limit = 10;
+
+    useEffect(() => {
+        setTitle('Canciones');
+        setShowBack(false);
+    }, [setTitle, setShowBack]);
 
     useEffect(() => {
         const loadSetlists = async () => {
@@ -124,6 +134,42 @@ export default function SongsPage() {
 
     const toggleFilters = () => {
         setShowFilters(!showFilters);
+    };
+
+    const handlePlayPause = (song: any) => {
+        if (!song.audioUrl) return;
+
+        // Misma canción: toggle play/pause
+        if (playingId === song.id) {
+            if (audioRef.current) {
+                if (audioRef.current.paused) {
+                    audioRef.current.play();
+                } else {
+                    audioRef.current.pause();
+                    setPlayingId(null);
+                }
+            }
+            return;
+        }
+
+        // Otra canción: parar la actual y reproducir la nueva
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = '';
+        }
+        const audio = new Audio(song.audioUrl);
+        audioRef.current = audio;
+        audio.play();
+        setPlayingId(song.id);
+        audio.onended = () => setPlayingId(null);
+    };
+
+    const handleToggleFavorite = async (songId: number) => {
+        await toggleFavorite(songId);
+        // Actualizar el estado local sin recargar toda la lista
+        setSongs(prev => prev.map(s =>
+            s.id === songId ? { ...s, isFavorite: !s.isFavorite } : s
+        ));
     };
 
     const hasActiveFilters = selectedArtist || selectedKey || selectedStyle || selectedLetter || search;
@@ -326,65 +372,19 @@ export default function SongsPage() {
                     ) : (
                         <div className="space-y-3">
                             {songs.map((song) => (
-                                <div
+                                <SongCard
                                     key={song.id}
-                                    className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition border border-gray-200 dark:border-gray-700 p-4"
-                                >
-                                    <div className="flex items-start justify-between gap-3">
-                                        {/* ENLACE A DETALLE (CORRECTO) */}
-                                        <Link
-                                            href={`/canciones/${song.id}`}
-                                            className="flex-1 min-w-0"
-                                        >
-                                            <h3 className="font-semibold text-base sm:text-lg text-gray-800 dark:text-white truncate">
-                                                {song.title}
-                                            </h3>
-                                            {song.artist && (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                                    {song.artist}
-                                                </p>
-                                            )}
-                                            <div className="flex gap-2 mt-1 flex-wrap">
-                                                {song.key && (
-                                                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                                                        {song.key}
-                                                    </span>
-                                                )}
-                                                {song.style && (
-                                                    <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">
-                                                        {song.style}
-                                                    </span>
-                                                )}
-                                                {!song.isPublic && (
-                                                    <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">
-                                                        Privada
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </Link>
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                            <button
-                                                onClick={async () => {
-                                                    // Toggle favorito (implementar)
-                                                    console.log('Toggle favorite', song.id);
-                                                }}
-                                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                                            >
-                                                <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 transition" />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedSongId(song.id);
-                                                    setSelectedSongTitle(song.title);
-                                                    setShowAddModal(true);
-                                                }}
-                                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                                            >
-                                                <ListPlus className="w-5 h-5 text-gray-400 hover:text-blue-500 transition" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                    song={song}
+                                    playingId={playingId}
+                                    onPlayPause={handlePlayPause}
+                                    isFavorite={song.isFavorite}
+                                    onToggleFavorite={handleToggleFavorite}
+                                    onAddToList={(songId, songTitle) => {
+                                        setSelectedSongId(songId);
+                                        setSelectedSongTitle(songTitle);
+                                        setShowAddModal(true);
+                                    }}
+                                />
                             ))}
                         </div>
                     )}

@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { getUserSetlists, deleteSetlist, updateSetlist } from '@/app/actions/setlists';
 import Link from 'next/link';
 import { Edit, Trash2, Plus, Music, X } from 'lucide-react';
+import { useTitle } from '@/lib/TitleContext';
 
 export default function SetlistsPage() {
   const router = useRouter();
+  const { setTitle, setShowBack } = useTitle();
   const [setlists, setSetlists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingList, setEditingList] = useState<any | null>(null);
@@ -22,8 +24,10 @@ export default function SetlistsPage() {
   };
 
   useEffect(() => {
+    setTitle('Mis Setlists');
+    setShowBack(false);
     loadSetlists();
-  }, []);
+  }, [setTitle, setShowBack]);
 
   const handleEdit = (list: any) => {
     setEditingList(list);
@@ -55,16 +59,7 @@ export default function SetlistsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Mis Listas</h2>
-        <Link
-          href="/setlists/nueva"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm"
-        >
-          <Plus className="w-4 h-4" /> Nueva lista
-        </Link>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 py-6 pb-24 sm:pb-6">
 
       {setlists.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -114,6 +109,14 @@ export default function SetlistsPage() {
           ))}
         </div>
       )}
+
+      {/* Botón flotante para nueva lista */}
+      <button
+        onClick={() => router.push('/setlists/nueva')}
+        className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       {/* Modal de edición */}
       {showModal && (

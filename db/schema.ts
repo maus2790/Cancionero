@@ -22,6 +22,7 @@ export const songs = sqliteTable('songs', {
     updatedAt: integer('updated_at').notNull().$default(() => Math.floor(Date.now() / 1000)),
     userId: integer('user_id').references(() => users.id),
     isPublic: integer('is_public', { mode: 'boolean' }).default(true),
+    audioUrl: text('audio_url'),
 });
 
 export const setlists = sqliteTable('setlists', {

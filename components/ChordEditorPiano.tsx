@@ -64,11 +64,10 @@ export function ChordEditorPiano({ initialData, onChange, width = 460 }: ChordEd
     }
 
     const whiteKeysCount = 7; // Una octava de 12 semitonos siempre tiene 7 teclas blancas
-    const whiteKeyWidth = width / whiteKeysCount;
-    const blackKeyWidth = whiteKeyWidth * 0.62;
-    const height = Math.round(whiteKeyWidth * 4.5);
+    const whiteKeyWidthPct = 100 / whiteKeysCount;
+    const blackKeyWidthPct = whiteKeyWidthPct * 0.62;
 
-    let x = 0;
+    let xPct = 0;
     const whiteKeyElements: ReactNode[] = [];
     const blackKeyElements: ReactNode[] = [];
 
@@ -82,8 +81,8 @@ export function ChordEditorPiano({ initialData, onChange, width = 460 }: ChordEd
                     onClick={() => toggleNote(note)}
                     className="absolute bottom-0 border border-gray-300 dark:border-gray-500 rounded-b cursor-pointer select-none transition-colors"
                     style={{
-                        left: x,
-                        width: whiteKeyWidth - 1,
+                        left: `${xPct}%`,
+                        width: `${whiteKeyWidthPct}%`,
                         height: '100%',
                         backgroundColor: isActive ? '#3b82f6' : 'white',
                         zIndex: 1,
@@ -92,25 +91,24 @@ export function ChordEditorPiano({ initialData, onChange, width = 460 }: ChordEd
                 >
                     {isActive && (
                         <span
-                            className="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-white"
-                            style={{ fontSize: Math.max(8, whiteKeyWidth * 0.4) }}
+                            className="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-white text-xs sm:text-sm"
                         >
                             {note}
                         </span>
                     )}
                 </div>
             );
-            x += whiteKeyWidth;
+            xPct += whiteKeyWidthPct;
         } else if (isBlack) {
-            const blackX = x - blackKeyWidth / 2;
+            const blackXPct = xPct - blackKeyWidthPct / 2;
             blackKeyElements.push(
                 <div
                     key={`black-${note}-${i}`}
                     onClick={() => toggleNote(note)}
                     className="absolute top-0 rounded-b cursor-pointer select-none transition-colors"
                     style={{
-                        left: blackX,
-                        width: blackKeyWidth,
+                        left: `${blackXPct}%`,
+                        width: `${blackKeyWidthPct}%`,
                         height: '60%',
                         backgroundColor: isActive ? '#2563eb' : '#1f2937',
                         zIndex: 2,
@@ -119,8 +117,7 @@ export function ChordEditorPiano({ initialData, onChange, width = 460 }: ChordEd
                 >
                     {isActive && (
                         <span
-                            className="absolute bottom-0.5 left-1/2 -translate-x-1/2 font-bold text-white"
-                            style={{ fontSize: Math.max(6, blackKeyWidth * 0.35) }}
+                            className="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-white text-[10px] sm:text-xs"
                         >
                             {note.replace('#', String.fromCharCode(9839))}
                         </span>
@@ -148,8 +145,8 @@ export function ChordEditorPiano({ initialData, onChange, width = 460 }: ChordEd
             </div>
 
             <div
-                className="relative overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900"
-                style={{ width, height }}
+                className="relative overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 w-full max-w-full"
+                style={{ maxWidth: width, aspectRatio: '7 / 4.5' }}
             >
                 {whiteKeyElements}
                 {blackKeyElements}

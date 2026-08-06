@@ -1,9 +1,18 @@
+//app/(app)/page.tsx
 'use client';
 
 import { useTheme } from '@/lib/ThemeProvider';
+import { useTitle } from '@/lib/TitleContext';
+import { useEffect } from 'react';
 
 export default function HomePage() {
     const { theme } = useTheme();
+    const { setTitle, setShowBack } = useTitle();
+
+    useEffect(() => {
+        setTitle('Cancionero Cristiano');
+        setShowBack(false);
+    }, [setTitle, setShowBack]);
 
     return (
         <div className="space-y-6">

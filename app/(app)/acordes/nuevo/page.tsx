@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createChord } from '@/app/actions/chords';
 import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
 import { ChordEditorPiano, PianoData } from '@/components/ChordEditorPiano';
+import { ImageDropCrop } from '@/components/ImageDropCrop';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
-import { X } from 'lucide-react';
 
 function NewChordForm() {
     const { setTitle, setShowBack, setOnBack } = useTitle();
@@ -24,7 +24,7 @@ function NewChordForm() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const [activeTab] = useState<'guitar' | 'piano'>(
+    const [activeTab, setActiveTab] = useState<'guitar' | 'piano'>(
         searchParams.get('tab') === 'piano' ? 'piano' : 'guitar'
     );
     const [selectedNote, setSelectedNote] = useState('C');
@@ -38,31 +38,11 @@ function NewChordForm() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const chordName = getChordName(selectedNote, selectedType);
     useEffect(() => {
         setTitle(`Nuevo Acorde (${chordName})`);
     }, [setTitle, chordName]);
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                setImagePreview(event.target?.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const removeImage = () => {
-        setImageFile(null);
-        setImagePreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -73,8 +53,8 @@ function NewChordForm() {
         formData.append('name', chordName);
         formData.append('root', selectedNote);
         formData.append('type', selectedType);
-        formData.append('guitarPositions', activeTab === 'guitar' ? JSON.stringify(guitarPositions) : '');
-        formData.append('pianoPositions', activeTab === 'piano' ? JSON.stringify(pianoData) : '');
+        formData.append('guitarPositions', JSON.stringify(guitarPositions));
+        formData.append('pianoPositions', JSON.stringify(pianoData));
         formData.append('imageFolder', activeTab === 'piano' ? 'piano' : 'chords');
         if (imageFile) {
             formData.append('image', imageFile);
@@ -97,7 +77,7 @@ function NewChordForm() {
         }
         setSelectedNote('C');
         setSelectedType('major');
-        removeImage();
+        setImageFile(null);
     };
 
     return (
@@ -112,8 +92,9 @@ function NewChordForm() {
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Fila: Nota + Tipo */}
+                <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Nota *
@@ -144,60 +125,62 @@ function NewChordForm() {
                     </div>
                 </div>
 
-                {/* Editor según tab activo */}
-                <div>
-                    {activeTab === 'guitar' ? (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Posición en Guitarra
-                            </label>
-                            <ChordEditor
-                                initialPositions={guitarPositions}
-                                onChange={setGuitarPositions}
-                                width={400}
-                            />
-                        </div>
-                    ) : (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Notas en Piano
-                            </label>
-                            <ChordEditorPiano
-                                initialData={pianoData}
-                                onChange={setPianoData}
-                                width={460}
-                            />
-                        </div>
-                    )}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Imagen de {activeTab === 'guitar' ? 'Guitarra' : 'Piano'} (opcional)
-                    </label>
-                    <div className="flex items-center gap-3">
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="flex-1 text-sm border rounded-lg p-2 bg-white dark:bg-gray-800"
-                        />
-                        {imagePreview && (
+                {/* Diagrama + Imagen lado a lado en desktop, apilado en móvil */}
+                <div className="flex flex-col md:flex-row gap-4 items-start">
+                    {/* Diagrama */}
+                    <div className="w-full md:flex-1 min-w-0">
+                        {/* Tabs de Instrumento */}
+                        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-4 w-fit">
                             <button
                                 type="button"
-                                onClick={removeImage}
-                                className="p-1 text-red-500 hover:text-red-700"
+                                onClick={() => setActiveTab('guitar')}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === 'guitar' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                             >
-                                <X className="w-5 h-5" />
+                                Guitarra
                             </button>
-                        )}
-                    </div>
-                    {imagePreview && (
-                        <div className="mt-2">
-                            <img src={imagePreview} alt="Vista previa" className="max-h-32 rounded" />
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('piano')}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === 'piano' ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                            >
+                                Piano
+                            </button>
                         </div>
-                    )}
+
+                        <div className={activeTab === 'guitar' ? 'block' : 'hidden'}>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Posición en Guitarra
+                                </label>
+                                <ChordEditor
+                                    initialPositions={guitarPositions}
+                                    onChange={setGuitarPositions}
+                                    width={400}
+                                />
+                            </div>
+                        <div className={activeTab === 'piano' ? 'block' : 'hidden'}>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Notas en Piano
+                                </label>
+                                <ChordEditorPiano
+                                    initialData={pianoData}
+                                    onChange={setPianoData}
+                                    width={460}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Imagen drag & drop con recorte */}
+                    <div className="w-full md:w-80 shrink-0">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Imagen (opcional)
+                        </label>
+                        <ImageDropCrop
+                            type={activeTab}
+                            onCroppedFile={(file) => setImageFile(file)}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex gap-3">

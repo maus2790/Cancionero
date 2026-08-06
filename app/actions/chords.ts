@@ -2,7 +2,7 @@
 
 import { db } from '@/db';
 import { chords } from '@/db/schema';
-import { eq, and, like, asc, or } from 'drizzle-orm';
+import { eq, and, like, asc, or, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
 import { uploadImage, deleteImage } from '@/lib/r2';
@@ -60,6 +60,19 @@ export async function createChord(formData: FormData) {
     const isPianoImage = imageFolder === 'piano';
 
     const now = Math.floor(Date.now() / 1000);
+
+    // Verificar si ya existe un acorde con ese nombre
+    const existingChords = await db
+        .select()
+        .from(chords)
+        .where(and(
+            eq(chords.name, name),
+            or(eq(chords.userId, user.id), eq(chords.isPredefined, true))
+        ));
+
+    if (existingChords.length > 0) {
+        throw new Error('Ya existe un acorde con ese nombre. Por favor, edítalo desde el banco de acordes.');
+    }
 
     // Primero insertamos el acorde para obtener el ID
     const [newChord] = await db
@@ -211,4 +224,48 @@ export async function searchChords(query: string) {
         .where(and(...conditions))
         .orderBy(asc(chords.name))
         .limit(20);
+}
+
+// Buscar acorde exacto por nombre
+export async function getChordByNameExact(name: string) {
+    const user = await getCurrentUser();
+    const userId = user?.id;
+
+    let conditions: any[] = [eq(chords.name, name)];
+    if (userId) {
+        conditions.push(or(eq(chords.userId, userId), eq(chords.isPredefined, true)));
+    } else {
+        conditions.push(eq(chords.isPredefined, true));
+    }
+
+    const result = await db
+        .select()
+        .from(chords)
+        .where(and(...conditions))
+        .orderBy(asc(chords.name))
+        .limit(1);
+    
+    return result[0] || null;
+}
+
+// ============================================================
+// CONTAR ACORDES (para el dashboard)
+// ============================================================
+export async function getChordsCount() {
+    const user = await getCurrentUser();
+    const userId = user?.id;
+
+    if (userId) {
+        const [result] = await db
+            .select({ count: count() })
+            .from(chords)
+            .where(or(eq(chords.isPredefined, true), eq(chords.userId, userId)));
+        return result?.count ?? 0;
+    } else {
+        const [result] = await db
+            .select({ count: count() })
+            .from(chords)
+            .where(eq(chords.isPredefined, true));
+        return result?.count ?? 0;
+    }
 }

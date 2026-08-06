@@ -6,6 +6,7 @@ import { eq, and, like, asc, desc, count, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from './auth';
+import { uploadFile, generateAudioKey, deleteFile } from '@/lib/r2';
 
 // ============================================================
 // OBTENER CANCIONES CON FILTROS
@@ -61,14 +62,28 @@ export async function getSongs(
         .limit(limit)
         .offset(offset);
 
+    // Obtener favoritos del usuario actual (si está autenticado)
+    let favoriteIds = new Set<number>();
+    try {
+        const user = await getCurrentUser();
+        if (user) {
+            const userFavs = await db
+                .select({ songId: favorites.songId })
+                .from(favorites)
+                .where(eq(favorites.userId, user.id));
+            favoriteIds = new Set(userFavs.map(f => f.songId));
+        }
+    } catch {}
+
     return {
-        items,
+        items: items.map(song => ({ ...song, isFavorite: favoriteIds.has(song.id) })),
         total,
         totalPages: Math.ceil(total / limit),
         page,
         limit,
     };
 }
+
 
 // ============================================================
 // OBTENER UNA CANCIÓN POR ID
@@ -138,12 +153,38 @@ export async function saveSong(formData: FormData) {
     const style = formData.get('style') as string;
     const content = formData.get('content') as string;
     const isPublic = formData.get('isPublic') === 'true';
+    const audio = formData.get('audio') as File | null;
+    const removeAudio = formData.get('removeAudio') === 'true';
 
     if (!title || !content) {
         return { error: 'Título y contenido son obligatorios' };
     }
 
+    let insertedId = id;
+
     if (id) {
+        // Obtenemos la canción actual para borrar el audio viejo si es necesario
+        const existingResult = await db.select({ audioUrl: songs.audioUrl }).from(songs).where(eq(songs.id, id));
+        const existingAudioUrl = existingResult[0]?.audioUrl;
+
+        let finalAudioUrl: string | null | undefined = undefined;
+
+        if (removeAudio || (audio && audio.size > 0)) {
+            if (existingAudioUrl) {
+                try {
+                    // Extraer key de la URL, asumiendo formato url/music/archivo.mp3
+                    const parts = existingAudioUrl.split('/');
+                    const key = parts.slice(-2).join('/');
+                    if (key.startsWith('music/')) {
+                        await deleteFile(key);
+                    }
+                } catch (e) {
+                    console.error("Error al eliminar audio antiguo", e);
+                }
+            }
+            finalAudioUrl = null;
+        }
+
         await db
             .update(songs)
             .set({
@@ -153,11 +194,12 @@ export async function saveSong(formData: FormData) {
                 style: style || null,
                 content,
                 isPublic,
+                ...(finalAudioUrl !== undefined ? { audioUrl: finalAudioUrl } : {}),
                 updatedAt: Math.floor(Date.now() / 1000),
             })
             .where(eq(songs.id, id));
     } else {
-        await db.insert(songs).values({
+        const result = await db.insert(songs).values({
             title,
             artist: artist || null,
             key: key || null,
@@ -165,7 +207,16 @@ export async function saveSong(formData: FormData) {
             content,
             isPublic,
             userId: user.id,
-        });
+        }).returning({ id: songs.id });
+        insertedId = result[0].id;
+    }
+
+    // Subir nuevo audio si existe
+    if (audio && audio.size > 0 && insertedId) {
+        const ext = audio.name.split('.').pop() || 'mp3';
+        const key = generateAudioKey(insertedId, ext);
+        const audioUrl = await uploadFile(audio, key);
+        await db.update(songs).set({ audioUrl }).where(eq(songs.id, insertedId));
     }
 
     revalidatePath('/canciones');
@@ -181,6 +232,18 @@ export async function deleteSong(id: number) {
 
     const song = await getSongById(id);
     if (song?.userId !== user.id) throw new Error('No autorizado');
+
+    if (song.audioUrl) {
+        try {
+            const parts = song.audioUrl.split('/');
+            const key = parts.slice(-2).join('/');
+            if (key.startsWith('music/')) {
+                await deleteFile(key);
+            }
+        } catch (e) {
+            console.error("Error al eliminar audio antiguo", e);
+        }
+    }
 
     await db.delete(songs).where(eq(songs.id, id));
     revalidatePath('/canciones');
@@ -222,3 +285,57 @@ export async function isFavorite(songId: number) {
 
     return existing.length > 0;
 }
+
+// ============================================================
+// OBTENER CANCIONES FAVORITAS DEL USUARIO
+// ============================================================
+export async function getFavoriteSongs() {
+    const user = await getCurrentUser();
+    if (!user) return [];
+
+    const result = await db
+        .select({
+            id: songs.id,
+            title: songs.title,
+            artist: songs.artist,
+            key: songs.key,
+            style: songs.style,
+            isPublic: songs.isPublic,
+            audioUrl: songs.audioUrl,
+        })
+        .from(favorites)
+        .innerJoin(songs, eq(favorites.songId, songs.id))
+        .where(eq(favorites.userId, user.id))
+        .orderBy(asc(songs.title));
+
+    return result;
+}
+
+// ============================================================
+// ESTADÍSTICAS PARA EL DASHBOARD
+// ============================================================
+export async function getDashboardStats() {
+    const user = await getCurrentUser();
+
+    // Contar canciones públicas
+    const [songsCount] = await db
+        .select({ count: count() })
+        .from(songs)
+        .where(eq(songs.isPublic, true));
+
+    // Contar favoritos del usuario (si está autenticado)
+    let favoritesCount = 0;
+    if (user) {
+        const [favResult] = await db
+            .select({ count: count() })
+            .from(favorites)
+            .where(eq(favorites.userId, user.id));
+        favoritesCount = favResult?.count ?? 0;
+    }
+
+    return {
+        songs: songsCount?.count ?? 0,
+        favorites: favoritesCount,
+    };
+}
+

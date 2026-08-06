@@ -72,14 +72,15 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
     const barreOptions = Array.from({ length: frets }, (_, i) => baseFret + i);
 
     const leftMargin = boxWidth * 1.5;
-    const topMargin = boxHeight * 1.2;
+    const topMargin = boxHeight * 0.75;
     const svgWidth = width + leftMargin;
-    const svgHeight = boxHeight * frets + topMargin * 1.2;
+    const svgHeight = boxHeight * frets + topMargin * 1.1;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-[400px] mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-[400px] mx-auto pb-0">
             <div className="flex flex-col items-center">
-                <div className="flex flex-wrap gap-4 mb-4 items-center w-full">
+                {/* Contenedor de controles con margen inferior reducido */}
+                <div className="flex flex-wrap gap-2 mb-0 pb-0 items-center w-full">
                     <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Traste base:</label>
                         <input
@@ -91,11 +92,11 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
                                 const val = parseInt(e.target.value) || 1;
                                 setBaseFret(Math.max(1, val));
                             }}
-                            className="w-16 px-2 py-1 border rounded-lg text-sm bg-white dark:bg-gray-700"
+                            className="w-14 px-2 py-1 border rounded-lg text-sm bg-white dark:bg-gray-700"
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Cejilla:</span>
+                        <span className="text-sm font-medium">Puente:</span>
                         <select
                             value={barre ?? ''}
                             onChange={(e) => {
@@ -114,15 +115,9 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
                             ))}
                         </select>
                     </div>
-                    <button
-                        onClick={clearAll}
-                        className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
-                    >
-                        Limpiar
-                    </button>
                 </div>
 
-                <div className="relative w-full">
+                <div className="relative w-full -mt-1">
                     <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto">
                         <g transform={`translate(${leftMargin}, ${topMargin})`}>
                             {/* Fondo del diapasón */}
@@ -217,7 +212,7 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
                                             stroke="#ef4444"
                                             strokeWidth={2}
                                             className="cursor-pointer"
-                                            onClick={() => toggleFinger(stringIndex, 0)} // Click en mute cambia a aire (o)
+                                            onClick={() => toggleFinger(stringIndex, 0)}
                                         />
                                     );
                                 }
@@ -232,7 +227,7 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
                                             stroke="#3b82f6"
                                             strokeWidth={2}
                                             className="cursor-pointer"
-                                            onClick={() => toggleFinger(stringIndex, 0)} // Click en aire lo mutea
+                                            onClick={() => toggleFinger(stringIndex, 0)}
                                         />
                                     );
                                 }
@@ -276,7 +271,7 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
                                 })
                             )}
                         </g>
-                        {/* Número de traste base: centrado exactamente entre primer y segundo traste */}
+                        {/* Número de traste base */}
                         {baseFret > 1 && (
                             <text
                                 x={leftMargin * 0.35}
@@ -294,7 +289,7 @@ export function ChordEditor({ initialPositions, onChange, width = 400 }: ChordEd
                     </svg>
                 </div>
 
-                <div className="mt-3 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg w-full text-xs font-mono overflow-x-auto">
+                <div className="mt-3 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg w-full text-xs font-mono overflow-x-auto hidden">
                     {JSON.stringify({ barre, fingers, baseFret })}
                 </div>
             </div>

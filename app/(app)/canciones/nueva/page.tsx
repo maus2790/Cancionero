@@ -1,13 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { saveSong } from '@/app/actions/songs';
-import { ArrowLeft, Clipboard, ClipboardCheck } from 'lucide-react';
-import Link from 'next/link';
+import { Clipboard, ClipboardCheck, Music, X } from 'lucide-react';
+import { useTitle } from '@/lib/TitleContext';
+import { NOTES } from '@/lib/constants';
 
-// Todas las notas musicales
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const STYLE_OPTIONS = ['', 'Gozo', 'Adoración', 'Contemporánea', 'Alabanza', 'Balada', 'Ritmo', 'Tradicional', 'Otros'];
 
 const EXAMPLE_CONTENT = `Intro: [Gmaj7]-[A9]-[Bm7]-[A9]
@@ -18,39 +17,44 @@ A quién iré en necesidad
 A quién iré en busca de paz
 [G]                                [D]    [A9]
 Y quién podrá mi vida saciar de verdaaaa-ad
-[D]                              [D/C#]
-Quién mas tendrá de mi compasión
-[Bm]                     [A9/F#]
-Y entenderá mi corazón
-[G]                                [D]     [A9]
-Quién cambiará mi eternidad sino Tú Jesús
 
 CORO:
 [D]               [A9/F#]      [G]
-Cristo a donde más podría ir
-[D]               [A9/F#]             [G]   [D/F#]
-Cristo que otro lugar puede exsistir
-[Em]                             [A9/F#]
-Sólo tu tiene palabras de Amor
-[G]                              [A9]
-Camino al Padre y verdad eres Tú
-[D]                [A9/F#]     [G]
-Cristo adonde más podría ir
-
-PUENTE:
-[A9]-[Ab9/A#]-[Bm7]-[A9]-[G]-[A9]-[Ab9/A#]-[Bm7]-[A9]...[D]`;
+Cristo a donde más podría ir`;
 
 export default function NewSongPage() {
     const router = useRouter();
+    const { setTitle, setOnBack, setShowBack } = useTitle();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [content, setContent] = useState('');
     const [pasted, setPasted] = useState(false);
+    const [audioFile, setAudioFile] = useState<File | null>(null);
+    const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    async function handleSubmit(formData: FormData) {
+    useEffect(() => {
+        setTitle('Nueva Canción');
+        setShowBack(true);
+        setOnBack(() => router.push('/canciones'));
+    }, [setTitle, setOnBack, setShowBack, router]);
+
+    // Clean up the object URL when the component unmounts
+    useEffect(() => {
+        return () => {
+            if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+        };
+    }, [audioPreviewUrl]);
+
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
         setLoading(true);
         setError('');
+        const formData = new FormData(e.currentTarget);
+        if (audioFile) {
+            formData.set('audio', audioFile);
+        }
         const result = await saveSong(formData);
         if (result?.error) {
             setError(result.error);
@@ -60,6 +64,25 @@ export default function NewSongPage() {
         }
     }
 
+    const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] ?? null;
+        if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+        if (file) {
+            setAudioFile(file);
+            setAudioPreviewUrl(URL.createObjectURL(file));
+        } else {
+            setAudioFile(null);
+            setAudioPreviewUrl(null);
+        }
+    };
+
+    const handleRemoveAudio = () => {
+        if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+        setAudioFile(null);
+        setAudioPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     const handlePasteFromClipboard = async () => {
         try {
             const text = await navigator.clipboard.readText();
@@ -67,34 +90,26 @@ export default function NewSongPage() {
                 setContent(text);
                 setPasted(true);
                 setTimeout(() => setPasted(false), 3000);
-                // Enfocar el textarea y mover el cursor al final
                 if (textareaRef.current) {
                     textareaRef.current.focus();
                     textareaRef.current.setSelectionRange(text.length, text.length);
                 }
             }
-        } catch (err) {
+        } catch {
             alert('No se pudo acceder al portapapeles. Asegúrate de permitir el permiso.');
         }
     };
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 pb-24 sm:pb-8">
-            <div className="flex items-center gap-4 mb-6">
-                <Link href="/canciones" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white">
-                    <ArrowLeft className="w-6 h-6" />
-                </Link>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Nueva Canción</h2>
-            </div>
-
             {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
                     {error}
                 </div>
             )}
 
-            <form action={handleSubmit} className="space-y-5 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                {/* Dos columnas en dos filas */}
+            <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                {/* Título y Artista */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -121,6 +136,7 @@ export default function NewSongPage() {
                     </div>
                 </div>
 
+                {/* Tonalidad y Estilo */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -151,6 +167,38 @@ export default function NewSongPage() {
                     </div>
                 </div>
 
+                {/* Audio */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                        <Music className="w-4 h-4" />
+                        Archivo de Audio (Opcional)
+                    </label>
+
+                    {audioPreviewUrl ? (
+                        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <audio src={audioPreviewUrl} controls className="flex-1 h-10" />
+                            <button
+                                type="button"
+                                onClick={handleRemoveAudio}
+                                className="shrink-0 text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                title="Quitar audio"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            name="audio"
+                            accept="audio/*"
+                            onChange={handleAudioChange}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                        />
+                    )}
+                </div>
+
+                {/* Contenido */}
                 <div>
                     <div className="flex items-center justify-between mb-1">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -186,6 +234,7 @@ export default function NewSongPage() {
                     />
                 </div>
 
+                {/* Visibilidad */}
                 <div className="flex items-center gap-2">
                     <input
                         type="checkbox"

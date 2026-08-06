@@ -3,10 +3,10 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { getSongById, saveSong } from '@/app/actions/songs';
-import { ArrowLeft, Clipboard, ClipboardCheck } from 'lucide-react';
-import Link from 'next/link';
+import { Clipboard, ClipboardCheck, Music, Trash2, X } from 'lucide-react';
+import { useTitle } from '@/lib/TitleContext';
+import { NOTES } from '@/lib/constants';
 
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const STYLE_OPTIONS = ['', 'Gozo', 'Adoración', 'Contemporánea', 'Alabanza', 'Balada', 'Ritmo', 'Tradicional', 'Otros'];
 
 const EXAMPLE_CONTENT = `Intro: [Gmaj7]-[A9]-[Bm7]-[A9]
@@ -14,41 +14,23 @@ const EXAMPLE_CONTENT = `Intro: [Gmaj7]-[A9]-[Bm7]-[A9]
 [D]                         [D/C#]
 A quién iré en necesidad
 [Bm]                        [A9/F#]
-A quién iré en busca de paz
-[G]                                [D]    [A9]
-Y quién podrá mi vida saciar de verdaaaa-ad
-[D]                              [D/C#]
-Quién mas tendrá de mi compasión
-[Bm]                     [A9/F#]
-Y entenderá mi corazón
-[G]                                [D]     [A9]
-Quién cambiará mi eternidad sino Tú Jesús
-
-CORO:
-[D]               [A9/F#]      [G]
-Cristo a donde más podría ir
-[D]               [A9/F#]             [G]   [D/F#]
-Cristo que otro lugar puede exsistir
-[Em]                             [A9/F#]
-Sólo tu tiene palabras de Amor
-[G]                              [A9]
-Camino al Padre y verdad eres Tú
-[D]                [A9/F#]     [G]
-Cristo adonde más podría ir
-
-PUENTE:
-[A9]-[Ab9/A#]-[Bm7]-[A9]-[G]-[A9]-[Ab9/A#]-[Bm7]-[A9]...[D]`;
+A quién iré en busca de paz`;
 
 export default function EditSongPage() {
     const { id } = useParams();
     const router = useRouter();
+    const { setTitle, setOnBack, setShowBack } = useTitle();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [song, setSong] = useState<any>(null);
+    const [removeAudio, setRemoveAudio] = useState(false);
     const [content, setContent] = useState('');
     const [pasted, setPasted] = useState(false);
+    const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
+    const [newAudioPreviewUrl, setNewAudioPreviewUrl] = useState<string | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const loadSong = async () => {
@@ -64,10 +46,29 @@ export default function EditSongPage() {
         loadSong();
     }, [id]);
 
-    async function handleSubmit(formData: FormData) {
+    useEffect(() => {
+        if (song) {
+            setTitle(`Editar: ${song.title}`);
+            setShowBack(true);
+            setOnBack(() => router.push(`/canciones/${id}`));
+        }
+    }, [song, setTitle, setOnBack, setShowBack, id, router]);
+
+    // Cleanup preview URL
+    useEffect(() => {
+        return () => {
+            if (newAudioPreviewUrl) URL.revokeObjectURL(newAudioPreviewUrl);
+        };
+    }, [newAudioPreviewUrl]);
+
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
         setSaving(true);
         setError('');
+        const formData = new FormData(e.currentTarget);
         formData.append('id', String(id));
+        if (removeAudio) formData.append('removeAudio', 'true');
+        if (newAudioFile) formData.set('audio', newAudioFile);
         const result = await saveSong(formData);
         if (result?.error) {
             setError(result.error);
@@ -76,6 +77,25 @@ export default function EditSongPage() {
             router.push('/canciones');
         }
     }
+
+    const handleNewAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] ?? null;
+        if (newAudioPreviewUrl) URL.revokeObjectURL(newAudioPreviewUrl);
+        if (file) {
+            setNewAudioFile(file);
+            setNewAudioPreviewUrl(URL.createObjectURL(file));
+        } else {
+            setNewAudioFile(null);
+            setNewAudioPreviewUrl(null);
+        }
+    };
+
+    const handleRemoveNewAudio = () => {
+        if (newAudioPreviewUrl) URL.revokeObjectURL(newAudioPreviewUrl);
+        setNewAudioFile(null);
+        setNewAudioPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     const handlePasteFromClipboard = async () => {
         try {
@@ -89,7 +109,7 @@ export default function EditSongPage() {
                     textareaRef.current.setSelectionRange(text.length, text.length);
                 }
             }
-        } catch (err) {
+        } catch {
             alert('No se pudo acceder al portapapeles. Asegúrate de permitir el permiso.');
         }
     };
@@ -102,20 +122,14 @@ export default function EditSongPage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 pb-24 sm:pb-8">
-            <div className="flex items-center gap-4 mb-6">
-                <Link href={`/canciones/${id}`} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white">
-                    <ArrowLeft className="w-6 h-6" />
-                </Link>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Editar Canción</h2>
-            </div>
-
             {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
                     {error}
                 </div>
             )}
 
-            <form action={handleSubmit} className="space-y-5 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                {/* Título y Artista */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -142,6 +156,7 @@ export default function EditSongPage() {
                     </div>
                 </div>
 
+                {/* Tonalidad y Estilo */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -174,6 +189,61 @@ export default function EditSongPage() {
                     </div>
                 </div>
 
+                {/* Audio */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                        <Music className="w-4 h-4" />
+                        Archivo de Audio
+                    </label>
+
+                    {/* Audio guardado existente */}
+                    {song.audioUrl && !removeAudio && !newAudioPreviewUrl && (
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg mb-2">
+                            <audio src={song.audioUrl} controls className="flex-1 h-10" />
+                            <button
+                                type="button"
+                                onClick={() => setRemoveAudio(true)}
+                                className="shrink-0 text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                title="Eliminar audio actual"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        </div>
+                    )}
+
+                    {removeAudio && !newAudioPreviewUrl && (
+                        <p className="text-xs text-orange-500 mb-2">
+                            El audio actual será eliminado al guardar.
+                            <button type="button" onClick={() => setRemoveAudio(false)} className="ml-2 underline">Deshacer</button>
+                        </p>
+                    )}
+
+                    {/* Vista previa de nuevo audio seleccionado */}
+                    {newAudioPreviewUrl ? (
+                        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <audio src={newAudioPreviewUrl} controls className="flex-1 h-10" />
+                            <button
+                                type="button"
+                                onClick={handleRemoveNewAudio}
+                                className="shrink-0 text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                title="Quitar nuevo audio"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            name="audio"
+                            accept="audio/*"
+                            onChange={handleNewAudioChange}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                        />
+                    )}
+                </div>
+
+                {/* Contenido */}
                 <div>
                     <div className="flex items-center justify-between mb-1">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -209,6 +279,7 @@ export default function EditSongPage() {
                     />
                 </div>
 
+                {/* Visibilidad */}
                 <div className="flex items-center gap-2">
                     <input
                         type="checkbox"
