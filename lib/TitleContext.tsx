@@ -18,7 +18,7 @@ type TitleContextType = {
 const TitleContext = createContext<TitleContextType | undefined>(undefined);
 
 export function TitleProvider({ children }: { children: ReactNode }) {
-    const [title, setTitle] = useState('Cancionero');
+    const [title, setTitle] = useState('Tu Cancionero');
     const [showBack, setShowBack] = useState(false);
     // Guardamos la callback dentro de un objeto para que React
     // no la interprete como un "lazy updater" al llamar setOnBack.

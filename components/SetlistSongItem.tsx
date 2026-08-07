@@ -97,7 +97,7 @@ export function SetlistSongItem({
                             </span>
                         )}
                         {song.fontSize && song.fontSize !== 'medium' && (
-                            <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">
+                            <span className="px-2 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">
                                 {song.fontSize}
                             </span>
                         )}

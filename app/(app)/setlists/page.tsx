@@ -4,9 +4,20 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSetlists, deleteSetlist, updateSetlist } from '@/app/actions/setlists';
 import Link from 'next/link';
-import { Edit, Trash2, Plus, Music, X } from 'lucide-react';
+import { Edit, Trash2, Plus, Music, X, Guitar, Headphones, MicVocal, Disc3, Radio } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
 import toast from 'react-hot-toast';
+import { getSetlistAppearance } from '@/lib/setlistAppearance';
+
+const setlistIcons = { music: Music, guitar: Guitar, headphones: Headphones, mic: MicVocal, disc: Disc3, radio: Radio };
+const setlistColors = {
+  sky: 'from-sky-400 to-blue-600',
+  violet: 'from-violet-400 to-indigo-600',
+  rose: 'from-rose-400 to-pink-600',
+  amber: 'from-amber-400 to-orange-600',
+  emerald: 'from-emerald-400 to-teal-600',
+  indigo: 'from-indigo-400 to-blue-700',
+};
 
 export default function SetlistsPage() {
   const router = useRouter();
@@ -79,22 +90,31 @@ export default function SetlistsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {setlists.map((list) => (
+          {setlists.map((list) => {
+            const appearance = getSetlistAppearance(list.id, list.icon, list.color);
+            const Icon = setlistIcons[appearance.icon as keyof typeof setlistIcons] || Music;
+            const colorClass = setlistColors[appearance.color as keyof typeof setlistColors] || setlistColors.sky;
+            return (
             <div
               key={list.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition cursor-pointer group relative"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-sky-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition cursor-pointer group relative overflow-hidden"
             >
               <div
                 onClick={() => router.push(`/setlists/${list.id}`)}
-                className="block p-4"
+                className="flex gap-4 p-5"
               >
-                <h3 className="font-semibold text-lg text-gray-800 dark:text-white">{list.name}</h3>
-                {list.description && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                    {list.description}
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 mt-2">{list.songCount || 0} canciones</p>
+                <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${colorClass} text-white shadow-lg`}>
+                  <Icon className="w-7 h-7" />
+                </div>
+                <div className="min-w-0 flex-1 pr-10">
+                  <h3 className="font-semibold text-lg text-gray-800 dark:text-white truncate">{list.name}</h3>
+                  {list.description && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                      {list.description}
+                    </p>
+                  )}
+                  <p className="text-xs font-medium text-sky-600 dark:text-sky-400 mt-3">{list.songCount || 0} canciones</p>
+                </div>
               </div>
               <div className="absolute top-2 right-2 flex gap-1">
                 <button
@@ -117,7 +137,7 @@ export default function SetlistsPage() {
                 </button>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 

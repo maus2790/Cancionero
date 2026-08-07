@@ -19,6 +19,7 @@ import {
     PlusCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import { InstallAppButton } from '@/components/InstallAppButton';
 
 // Componente para tarjeta de estadística
 function StatCard({
@@ -95,7 +96,7 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setTitle('Cancionero Cristiano');
+        setTitle('Tu Cancionero');
         setShowBack(false);
     }, [setTitle, setShowBack]);
 
@@ -137,12 +138,12 @@ export default function HomePage() {
     return (
         <div className="space-y-6 max-w-6xl mx-auto px-4 py-6">
             {/* Saludo */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-800 dark:to-indigo-800 rounded-2xl shadow-lg p-6 text-white">
+            <div className="bg-gradient-to-r from-sky-600 to-blue-700 dark:from-sky-800 dark:to-blue-900 rounded-2xl shadow-lg p-6 text-white">
                 <h2 className="text-2xl font-bold">
                     ¡Bienvenido{user?.name ? `, ${user.name}` : ''}! 👋
                 </h2>
                 <p className="text-blue-100 mt-1">
-                    Prepárate para adorar con nuestras canciones y acordes.
+                    Organiza tus canciones, acordes y listas desde un solo lugar.
                 </p>
                 <div className="mt-4 flex gap-2">
                     <button
@@ -157,6 +158,7 @@ export default function HomePage() {
                     >
                         <PlusCircle className="w-4 h-4" /> Agregar canción
                     </button>
+                    <InstallAppButton />
                 </div>
             </div>
 
@@ -178,7 +180,7 @@ export default function HomePage() {
                     icon={ListMusic}
                     label="Setlists"
                     value={stats.setlists}
-                    color="bg-purple-500"
+                    color="bg-sky-500"
                 />
                 <StatCard
                     icon={Heart}
@@ -213,7 +215,7 @@ export default function HomePage() {
                         icon={ListMusic}
                         title="Setlists"
                         description="Organiza tus listas"
-                        color="bg-purple-500"
+                        color="bg-sky-500"
                     />
                     <QuickAccessCard
                         href="/favoritos"

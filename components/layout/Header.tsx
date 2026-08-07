@@ -11,6 +11,11 @@ import {
     ArrowLeft,
     Shield,
     User,
+    Guitar,
+    Music,
+    List,
+    Heart,
+    Home,
 } from 'lucide-react';
 import { useTheme } from '@/lib/ThemeProvider';
 import { useRouter, usePathname } from 'next/navigation';
@@ -81,8 +86,22 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
         .toUpperCase()
         .slice(0, 2);
 
+    const HeaderIcon = pathname.startsWith('/canciones')
+        ? Music
+        : pathname.startsWith('/acordes')
+            ? Guitar
+            : pathname.startsWith('/setlists')
+                ? List
+                : pathname.startsWith('/favoritos')
+                    ? Heart
+                    : pathname.startsWith('/perfil')
+                        ? User
+                        : pathname.startsWith('/admin')
+                            ? Shield
+                            : Home;
+
     return (
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm">
+        <header className="bg-sky-50 dark:bg-slate-900 border-b border-sky-100 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
             <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
                 <div className="flex items-center gap-3">
                     {showBack ? (
@@ -103,9 +122,14 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                         </button>
                     ) : null}
 
-                    <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 truncate max-w-[150px] sm:max-w-xs">
-                        {title}
-                    </h1>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-sm">
+                            <HeaderIcon className="w-4 h-4" />
+                        </div>
+                        <h1 className="text-xl font-bold text-blue-700 dark:text-sky-300 truncate max-w-[130px] sm:max-w-xs">
+                            {title}
+                        </h1>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">

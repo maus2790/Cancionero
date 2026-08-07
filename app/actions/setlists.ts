@@ -5,6 +5,7 @@ import { setlists, setlistSongs, songs } from '@/db/schema';
 import { eq, and, desc, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
+import { SETLIST_APPEARANCES } from '@/lib/setlistAppearance';
 
 export async function getUserSetlists() {
     const user = await getCurrentUser();
@@ -15,6 +16,8 @@ export async function getUserSetlists() {
             id: setlists.id,
             name: setlists.name,
             description: setlists.description,
+            icon: setlists.icon,
+            color: setlists.color,
             createdAt: setlists.createdAt,
             songCount: db.$count(setlistSongs, eq(setlistSongs.setlistId, setlists.id)),
         })
@@ -60,11 +63,14 @@ export async function createSetlist(data: { name: string; description?: string }
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
 
+    const appearance = SETLIST_APPEARANCES[Math.floor(Math.random() * SETLIST_APPEARANCES.length)];
     const [newSetlist] = await db
         .insert(setlists)
         .values({
             name: data.name,
             description: data.description || null,
+            icon: appearance.icon,
+            color: appearance.color,
             userId: user.id,
         })
         .returning();

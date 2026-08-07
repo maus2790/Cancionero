@@ -79,7 +79,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
                     
                     let baseClasses = 'flex items-center gap-3 px-4 py-3 rounded-lg transition ';
                     if (isSpecial) {
-                        baseClasses += 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5';
+                        baseClasses += 'bg-gradient-to-r from-sky-600 to-blue-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5';
                     } else if (isBack) {
                         baseClasses += 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 mt-4 border-t border-gray-200 dark:border-gray-700 pt-3';
                     } else if (isActive) {

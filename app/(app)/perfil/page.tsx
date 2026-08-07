@@ -112,7 +112,7 @@ export default function ProfilePage() {
 
     const statCards = [
         { label: 'Canciones', value: stats.songs, icon: Music, color: 'text-blue-500' },
-        { label: 'Setlists', value: stats.setlists, icon: List, color: 'text-purple-500' },
+        { label: 'Setlists', value: stats.setlists, icon: List, color: 'text-sky-500' },
         { label: 'Favoritos', value: stats.favorites, icon: Heart, color: 'text-red-500' },
     ];
 
@@ -121,13 +121,13 @@ export default function ProfilePage() {
             {/* Tarjeta de perfil */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Header con gradiente */}
-                <div className="relative h-24 sm:h-32 bg-gradient-to-r from-blue-500 to-purple-600">
+                <div className="relative h-24 sm:h-32 bg-gradient-to-r from-sky-500 to-blue-700">
                     <div className="absolute -bottom-14 left-1/2 sm:left-6 transform -translate-x-1/2 sm:translate-x-0">
                         <AvatarUpload currentAvatarUrl={user.avatarUrl} userName={user.name} />
                     </div>
                     <div className="absolute top-3 right-4 flex gap-2">
                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full shadow-sm ${user.role === 'admin'
-                            ? 'bg-purple-500 text-white'
+                            ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                             }`}>
                             {user.role === 'admin' ? 'Administrador' : 'Usuario'}

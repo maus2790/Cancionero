@@ -1,23 +1,29 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 import { TitleProvider } from '@/lib/TitleContext';
 import { Toaster } from 'react-hot-toast';
+import { PwaServiceWorker } from '@/components/PwaServiceWorker';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Cancionero Cristiano',
-  description: 'Aplicación de canciones cristianas con acordes',
+  title: 'Tu Cancionero',
+  description: 'Organiza canciones, acordes y listas de reproducción',
   manifest: '/manifest.json',
-  themeColor: '#3B82F6',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Cancionero',
+    title: 'Tu Cancionero',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#f0f9ff',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -33,6 +39,7 @@ export default function RootLayout({
             {children}
           </TitleProvider>
           <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
+          <PwaServiceWorker />
         </ThemeProvider>
       </body>
     </html>

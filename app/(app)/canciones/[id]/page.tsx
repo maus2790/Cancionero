@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getSongById, toggleFavorite, deleteSong } from '@/app/actions/songs';
+import { getSongById, toggleFavorite, deleteSong, updateChordPositions } from '@/app/actions/songs';
 import { getChordByNameExact } from '@/app/actions/chords';
 import { getUserSetlists } from '@/app/actions/setlists';
 import { AddToSetlistModal } from '@/components/AddToSetlistModal';
@@ -61,6 +61,10 @@ export default function SongDetailPage() {
     const [playbackRate, setPlaybackRate] = useState(1);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showSongMenu, setShowSongMenu] = useState(false);
+    const [isEditingChordPositions, setIsEditingChordPositions] = useState(false);
+    const [chordOffsets, setChordOffsets] = useState<Record<string, number>>({});
+    const [dragStart, setDragStart] = useState<{ key: string; clientX: number; offset: number } | null>(null);
+    const [savingChordPositions, setSavingChordPositions] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     useAudioCleanup(audioRef);
 
@@ -75,6 +79,11 @@ export default function SongDetailPage() {
                 getCurrentUser()
             ]);
             setSong(songData);
+            try {
+                setChordOffsets(songData?.chordPositions ? JSON.parse(songData.chordPositions) : {});
+            } catch {
+                setChordOffsets({});
+            }
             setIsAuthenticated(!!user);
             setCurrentUser(user ? { id: user.id, role: user.role } : null);
             setLoading(false);
@@ -99,7 +108,7 @@ export default function SongDetailPage() {
             setOnBack(() => router.push('/canciones'));
         }
         return () => {
-            setTitle('Cancionero');
+            setTitle('Tu Cancionero');
             setShowBack(false);
             setHeaderRight(null);
         };
@@ -274,6 +283,19 @@ export default function SongDetailPage() {
         }
     };
 
+    const saveChordPositionChanges = async () => {
+        setSavingChordPositions(true);
+        try {
+            await updateChordPositions(Number(id), JSON.stringify(chordOffsets));
+            setIsEditingChordPositions(false);
+            toast.success('Posiciones de notas guardadas para todos');
+        } catch {
+            toast.error('No se pudieron guardar las posiciones');
+        } finally {
+            setSavingChordPositions(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -348,8 +370,17 @@ export default function SongDetailPage() {
                 </div>
             )}
 
+            {isEditingChordPositions && (
+                <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-blue-200 bg-blue-50 px-4 py-3 text-sm dark:border-blue-900 dark:bg-blue-950/50">
+                    <span className="font-medium text-blue-800 dark:text-blue-200">Arrastra las notas con el cursor de mano y guarda los cambios.</span>
+                    <div className="flex gap-2">
+                        <button onClick={() => setIsEditingChordPositions(false)} disabled={savingChordPositions} className="rounded-lg px-3 py-1.5 text-gray-700 hover:bg-blue-100 dark:text-gray-200">Cancelar</button>
+                        <button onClick={saveChordPositionChanges} disabled={savingChordPositions} className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingChordPositions ? 'Guardando...' : 'Guardar posiciones'}</button>
+                    </div>
+                </div>
+            )}
             <div className="min-h-screen overflow-x-auto p-4 sm:p-8">
-                <div className={`mx-auto min-w-max max-w-none whitespace-pre font-mono ${fontSizeClass} text-gray-800 dark:text-gray-200 leading-relaxed pb-32`}>
+                <div className={`mx-auto min-w-max max-w-none whitespace-pre ${fontSizeClass} text-gray-800 dark:text-gray-200 leading-relaxed pb-32`}>
                     {transposedContent.split('\n').map((line: string, i: number) => {
                         const parts = line.split(/(\[[^\]]+\])/g);
                         return (
@@ -357,12 +388,23 @@ export default function SongDetailPage() {
                                 {parts.map((part: string, j: number) => {
                                     if (part.startsWith('[') && part.endsWith(']')) {
                                         const fullChord = part.slice(1, -1);
+                                        const chordKey = `${i}-${j}`;
                                         return (
                                             <button
                                                 key={j}
-                                                onClick={() => handleChordClick(fullChord)}
-                                                className="inline-block text-left text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer focus:outline-none"
-                                                style={{ width: `${fullChord.length + 2}ch` }}
+                                                onClick={() => !isEditingChordPositions && handleChordClick(fullChord)}
+                                                onPointerDown={(event) => {
+                                                    if (!isEditingChordPositions) return;
+                                                    event.currentTarget.setPointerCapture(event.pointerId);
+                                                    setDragStart({ key: chordKey, clientX: event.clientX, offset: chordOffsets[chordKey] || 0 });
+                                                }}
+                                                onPointerMove={(event) => {
+                                                    if (!dragStart || dragStart.key !== chordKey) return;
+                                                    setChordOffsets(current => ({ ...current, [chordKey]: Math.round(dragStart.offset + event.clientX - dragStart.clientX) }));
+                                                }}
+                                                onPointerUp={() => setDragStart(null)}
+                                                className={`inline-block text-left text-blue-600 dark:text-blue-400 font-bold focus:outline-none ${isEditingChordPositions ? 'cursor-grab active:cursor-grabbing rounded bg-blue-100/70 px-0.5 dark:bg-blue-900/40' : 'cursor-pointer hover:underline'}`}
+                                                style={{ transform: `translateX(${chordOffsets[chordKey] || 0}px)` }}
                                             >
                                                 {fullChord}
                                             </button>
@@ -453,7 +495,7 @@ export default function SongDetailPage() {
                     </span>
                 </button>
 
-                {canManageSong && <div className="relative flex flex-col items-center gap-0.5">
+                <div className="relative flex flex-col items-center gap-0.5">
                     <button
                         onClick={() => setShowSongMenu(prev => !prev)}
                         className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 transition"
@@ -465,7 +507,17 @@ export default function SongDetailPage() {
                     <span className="text-[9px] text-gray-500 dark:text-gray-400">Más</span>
 
                     {showSongMenu && (
-                        <div className="absolute right-10 bottom-0 w-44 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
+                        <div className="absolute right-10 bottom-0 w-52 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
+                            <button
+                                onClick={() => {
+                                    setShowSongMenu(false);
+                                    setIsEditingChordPositions(true);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Editar posición de notas
+                            </button>
+                            {canManageSong && <>
                             <button
                                 onClick={() => {
                                     setShowSongMenu(false);
@@ -484,9 +536,10 @@ export default function SongDetailPage() {
                             >
                                 <Trash2 className="w-4 h-4" /> Eliminar canción
                             </button>
+                            </>}
                         </div>
                     )}
-                </div>}
+                </div>
             </div>
 
             <AddToSetlistModal

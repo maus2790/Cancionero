@@ -10,6 +10,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const BROWSER_COLORS = { light: '#f0f9ff', dark: '#0f172a' } as const;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<Theme>('light');
@@ -21,6 +22,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setTheme(initial);
         document.documentElement.classList.toggle('dark', initial === 'dark');
     }, []);
+
+    useEffect(() => {
+        const color = BROWSER_COLORS[theme];
+        document.documentElement.style.colorScheme = theme;
+
+        let themeColor = document.querySelector('meta[name="theme-color"]');
+        if (!themeColor) {
+            themeColor = document.createElement('meta');
+            themeColor.setAttribute('name', 'theme-color');
+            document.head.appendChild(themeColor);
+        }
+        themeColor.setAttribute('content', color);
+
+        let statusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+        if (!statusBar) {
+            statusBar = document.createElement('meta');
+            statusBar.setAttribute('name', 'apple-mobile-web-app-status-bar-style');
+            document.head.appendChild(statusBar);
+        }
+        statusBar.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
+    }, [theme]);
 
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';

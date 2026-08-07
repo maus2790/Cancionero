@@ -173,7 +173,7 @@ export default function SetlistDetailPage() {
         setOnBack(() => router.push('/setlists'));
         return () => {
             setShowBack(false);
-            setTitle('Cancionero');
+            setTitle('Tu Cancionero');
         };
     }, [setShowBack, setOnBack, router, setTitle]);
 
@@ -225,13 +225,13 @@ export default function SetlistDetailPage() {
     return (
         <div className={`transition-all overflow-y-auto scroll-smooth ${isFullscreen ? 'fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900' : 'min-h-screen flex flex-col'}`}>
             {/* Barra de números (fija debajo del header) */}
-            <div className="sticky top-0 z-40 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2 px-2 overflow-x-auto">
-                <div className="flex gap-1 justify-center min-w-max">
+            <div className={`fixed ${isFullscreen ? 'top-0 left-0 right-0' : 'top-16 left-0 right-0 min-[769px]:left-64'} z-40 bg-sky-50/95 dark:bg-slate-900/95 border-b border-sky-100 dark:border-slate-700 py-1 px-1 overflow-x-auto backdrop-blur shadow-sm`}>
+                <div className="flex gap-0.5 justify-center min-w-max">
                     {songs.map((item: any, index: number) => (
                         <button
                             key={item.id}
                             onClick={() => setCurrentSongIndex(index)}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition ${index === currentSongIndex
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition ${index === currentSongIndex
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                 }`}
@@ -244,7 +244,7 @@ export default function SetlistDetailPage() {
 
             {/* Contenido de la canción con soporte swipe */}
             <div
-                className="flex-1 overflow-y-auto p-4 pb-20"
+                className="flex-1 overflow-y-auto px-4 pt-14 pb-20"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

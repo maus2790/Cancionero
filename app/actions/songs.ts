@@ -267,6 +267,25 @@ export async function deleteSong(id: number) {
     return { success: true };
 }
 
+// Las posiciones se comparten: cualquier usuario autenticado puede ajustar
+// la lectura de acordes de una canción para todos los demás.
+export async function updateChordPositions(songId: number, positions: string) {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No autenticado');
+
+    try {
+        const parsed = JSON.parse(positions);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Formato inválido');
+    } catch {
+        throw new Error('Posiciones inválidas');
+    }
+
+    await db.update(songs)
+        .set({ chordPositions: positions, updatedAt: Math.floor(Date.now() / 1000) })
+        .where(eq(songs.id, songId));
+    revalidatePath(`/canciones/${songId}`);
+}
+
 // ============================================================
 // FAVORITOS
 // ============================================================

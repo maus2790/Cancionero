@@ -10,7 +10,7 @@ export default function HomePage() {
     const { setTitle, setShowBack } = useTitle();
 
     useEffect(() => {
-        setTitle('Cancionero Cristiano');
+        setTitle('Tu Cancionero');
         setShowBack(false);
     }, [setTitle, setShowBack]);
 
@@ -19,7 +19,7 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <p className="text-gray-600 dark:text-gray-300">
-                    Bienvenido al Cancionero Cristiano. Aquí encontrarás todas las canciones, acordes y setlists.
+                    Bienvenido a Tu Cancionero. Aquí encontrarás canciones, acordes y listas para organizar tu música.
                 </p>
                 <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                     <p className="text-sm text-blue-700 dark:text-blue-300">
