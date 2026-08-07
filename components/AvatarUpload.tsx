@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ImageDropCrop } from './ImageDropCrop';
 import { uploadAvatar, removeAvatar } from '@/app/actions/auth';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,11 @@ export function AvatarUpload({ currentAvatarUrl, userName }: AvatarUploadProps) 
     const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl || null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Refleja el avatar que llega después de cargar el perfil por primera vez.
+    useEffect(() => {
+        setAvatarUrl(currentAvatarUrl || null);
+    }, [currentAvatarUrl]);
 
     const handleCroppedFile = async (file: File | null) => {
         if (!file) {

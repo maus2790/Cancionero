@@ -1,3 +1,0 @@
-libsql://cancionero-db-maus2790.aws-us-west-2.turso.io
-
-eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3eHJXc0kydkVmR2ctYklfYk9EdWVRIiwib3JnX2lkIjoxMDAwMTQ4MjI3fQ.ctutA3WFXp_pjM4Sr0h8qVTWKySNVlUng2H_SQ5ART7-uyT8_tJ5NpiUVmkkzhpkd6krliNxWRSvjV-EkjDCAQ

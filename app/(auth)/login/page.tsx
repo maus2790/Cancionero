@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { handleLogin, handleGuestLogin, handleGoogleLogin } from '@/app/actions/auth';
+import { handleLogin, handleGuestLogin } from '@/app/actions/auth';
 import { Eye, EyeOff, Mail, Lock, LogIn, Users } from 'lucide-react';
 
 export default function LoginPage() {
@@ -37,9 +37,9 @@ export default function LoginPage() {
         router.push('/dashboard');
     };
 
-    const handleGoogle = async () => {
+    const handleGoogle = () => {
         setLoading(true);
-        await handleGoogleLogin();
+        window.location.assign('/api/auth/google');
     };
 
     return (
@@ -128,6 +128,7 @@ export default function LoginPage() {
 
                     <div className="space-y-3">
                         <button
+                            type="button"
                             onClick={handleGoogle}
                             disabled={loading}
                             className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition disabled:opacity-50 flex items-center justify-center gap-2"

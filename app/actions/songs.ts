@@ -2,9 +2,8 @@
 
 import { db } from '@/db';
 import { songs, favorites } from '@/db/schema';
-import { eq, and, like, asc, desc, count, inArray, sql } from 'drizzle-orm';
+import { eq, and, or, like, asc, desc, count, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { getCurrentUser } from './auth';
 import { uploadFile, generateAudioKey, deleteFile } from '@/lib/r2';
 
@@ -19,13 +18,21 @@ export async function getSongs(
         artist?: string;
         key?: string;
         style?: string;
+        mine?: boolean;
     }
 ) {
     const offset = (page - 1) * limit;
     const conditions = [];
 
-    // Solo canciones públicas
-    conditions.push(eq(songs.isPublic, true));
+    const user = await getCurrentUser();
+    if (filters?.mine) {
+        if (!user) return { items: [], total: 0, totalPages: 0, page, limit };
+        conditions.push(eq(songs.userId, user.id));
+    } else if (user) {
+        conditions.push(or(eq(songs.isPublic, true), eq(songs.userId, user.id)));
+    } else {
+        conditions.push(eq(songs.isPublic, true));
+    }
 
     if (search) {
         conditions.push(like(songs.title, `%${search}%`));
@@ -65,7 +72,6 @@ export async function getSongs(
     // Obtener favoritos del usuario actual (si está autenticado)
     let favoriteIds = new Set<number>();
     try {
-        const user = await getCurrentUser();
         if (user) {
             const userFavs = await db
                 .select({ songId: favorites.songId })
@@ -90,7 +96,13 @@ export async function getSongs(
 // ============================================================
 export async function getSongById(id: number) {
     const result = await db.select().from(songs).where(eq(songs.id, id));
-    return result[0] || null;
+    const song = result[0];
+    if (!song) return null;
+    if (!song.isPublic) {
+        const user = await getCurrentUser();
+        if (!user || (user.role !== 'admin' && song.userId !== user.id)) return null;
+    }
+    return song;
 }
 
 // ============================================================
@@ -149,7 +161,8 @@ export async function saveSong(formData: FormData) {
     const id = formData.get('id') ? Number(formData.get('id')) : undefined;
     const title = formData.get('title') as string;
     const artist = formData.get('artist') as string;
-    const key = formData.get('key') as string;
+    const keyNote = formData.get('key') as string;
+    const key = keyNote ? `${keyNote}${formData.get('keyMode') === 'minor' ? 'm' : ''}` : '';
     const style = formData.get('style') as string;
     const content = formData.get('content') as string;
     const isPublic = formData.get('isPublic') === 'true';
@@ -164,8 +177,12 @@ export async function saveSong(formData: FormData) {
 
     if (id) {
         // Obtenemos la canción actual para borrar el audio viejo si es necesario
-        const existingResult = await db.select({ audioUrl: songs.audioUrl }).from(songs).where(eq(songs.id, id));
-        const existingAudioUrl = existingResult[0]?.audioUrl;
+        const existingResult = await db.select({ audioUrl: songs.audioUrl, userId: songs.userId }).from(songs).where(eq(songs.id, id));
+        const existingSong = existingResult[0];
+        if (!existingSong || (user.role !== 'admin' && existingSong.userId !== user.id)) {
+            throw new Error('No autorizado');
+        }
+        const existingAudioUrl = existingSong.audioUrl;
 
         let finalAudioUrl: string | null | undefined = undefined;
 
@@ -220,7 +237,7 @@ export async function saveSong(formData: FormData) {
     }
 
     revalidatePath('/canciones');
-    redirect('/canciones');
+    return { success: true, action: id ? 'updated' : 'created', id: insertedId };
 }
 
 // ============================================================
@@ -231,7 +248,7 @@ export async function deleteSong(id: number) {
     if (!user) throw new Error('No autenticado');
 
     const song = await getSongById(id);
-    if (song?.userId !== user.id) throw new Error('No autorizado');
+    if (!song || (user.role !== 'admin' && song.userId !== user.id)) throw new Error('No autorizado');
 
     if (song.audioUrl) {
         try {
@@ -247,7 +264,7 @@ export async function deleteSong(id: number) {
 
     await db.delete(songs).where(eq(songs.id, id));
     revalidatePath('/canciones');
-    redirect('/canciones');
+    return { success: true };
 }
 
 // ============================================================
@@ -338,4 +355,4 @@ export async function getDashboardStats() {
         favorites: favoritesCount,
     };
 }
-
+

@@ -6,6 +6,7 @@ import { saveSong } from '@/app/actions/songs';
 import { Clipboard, ClipboardCheck, Music, X } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES } from '@/lib/constants';
+import toast from 'react-hot-toast';
 
 const STYLE_OPTIONS = ['', 'Gozo', 'Adoración', 'Contemporánea', 'Alabanza', 'Balada', 'Ritmo', 'Tradicional', 'Otros'];
 
@@ -60,6 +61,7 @@ export default function NewSongPage() {
             setError(result.error);
             setLoading(false);
         } else {
+            toast.success('Canción creada correctamente');
             router.push('/canciones');
         }
     }
@@ -151,6 +153,14 @@ export default function NewSongPage() {
                                 <option key={note} value={note}>{note}</option>
                             ))}
                         </select>
+                        <div className="mt-2 flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="keyMode" value="major" defaultChecked className="text-blue-600" /> Mayor
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="keyMode" value="minor" className="text-blue-600" /> Menor
+                            </label>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

@@ -8,6 +8,7 @@ import { ChordEditorPiano, PianoData } from '@/components/ChordEditorPiano';
 import { ImageDropCrop } from '@/components/ImageDropCrop';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
+import toast from 'react-hot-toast';
 
 function NewChordForm() {
     const { setTitle, setShowBack, setOnBack } = useTitle();
@@ -62,8 +63,10 @@ function NewChordForm() {
 
         try {
             await createChord(formData);
+            toast.success('Acorde creado correctamente');
             router.push('/acordes');
         } catch (err) {
+            toast.error('No se pudo crear el acorde');
             setError(err instanceof Error ? err.message : 'Error al crear acorde');
             setLoading(false);
         }

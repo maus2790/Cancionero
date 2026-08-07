@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { createSetlist } from '@/app/actions/setlists';
+import toast from 'react-hot-toast';
 
 interface CreateSetlistModalProps {
     isOpen: boolean;
@@ -29,6 +30,7 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
         setError('');
         try {
             await createSetlist({ name: name.trim(), description: description.trim() || undefined });
+            toast.success('Lista creada correctamente');
             onClose();
             if (onSuccess) onSuccess();
         } catch (err) {

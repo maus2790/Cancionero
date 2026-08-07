@@ -21,7 +21,7 @@ export function BottomNav() {
                 <Link
                     key={href}
                     href={href}
-                    className={`flex flex-col items-center gap-1 text-xs transition ${pathname === href
+                    className={`flex flex-col items-center gap-1 text-xs transition ${(href === '/' ? pathname === '/' || pathname === '/dashboard' : pathname === href)
                         ? 'text-blue-600 dark:text-blue-400'
                         : 'text-gray-500 dark:text-gray-400'
                         }`}

@@ -9,6 +9,8 @@ import { AddToSetlistModal } from '@/components/AddToSetlistModal';
 import { getUserSetlists } from '@/app/actions/setlists';
 import { SongCard } from '@/components/SongCard';
 import { useTitle } from '@/lib/TitleContext';
+import { useAudioCleanup } from '@/hooks/useAudioCleanup';
+import toast from 'react-hot-toast';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const STYLES = ['Adoración', 'Gozo', 'Contemporánea', 'Balada', 'Ritmo', 'Tradicional', 'Otro'];
@@ -27,6 +29,7 @@ export default function SongsPage() {
     const [selectedArtist, setSelectedArtist] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
     const [selectedStyle, setSelectedStyle] = useState('');
+    const [onlyMySongs, setOnlyMySongs] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedLetter, setSelectedLetter] = useState('');
     const [userSetlists, setUserSetlists] = useState<any[]>([]);
@@ -36,6 +39,7 @@ export default function SongsPage() {
     const filterRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [playingId, setPlayingId] = useState<number | null>(null);
+    useAudioCleanup(audioRef);
     const limit = 10;
 
     useEffect(() => {
@@ -69,7 +73,7 @@ export default function SongsPage() {
 
     useEffect(() => {
         loadSongs();
-    }, [search, page, selectedArtist, selectedKey, selectedStyle, selectedLetter]);
+    }, [search, page, selectedArtist, selectedKey, selectedStyle, selectedLetter, onlyMySongs]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -87,6 +91,7 @@ export default function SongsPage() {
         if (selectedArtist) filters.artist = selectedArtist;
         if (selectedKey) filters.key = selectedKey;
         if (selectedStyle) filters.style = selectedStyle;
+        if (onlyMySongs) filters.mine = true;
 
         if (selectedLetter) {
             const data = await getSongs(search, page, limit, filters);
@@ -111,6 +116,7 @@ export default function SongsPage() {
         if (filterType === 'style') setSelectedStyle('');
         if (filterType === 'letter') setSelectedLetter('');
         if (filterType === 'search') setSearch('');
+        if (filterType === 'mine') setOnlyMySongs(false);
         setPage(1);
     };
 
@@ -120,6 +126,7 @@ export default function SongsPage() {
         setSelectedStyle('');
         setSelectedLetter('');
         setSearch('');
+        setOnlyMySongs(false);
         setPage(1);
     };
 
@@ -165,14 +172,21 @@ export default function SongsPage() {
     };
 
     const handleToggleFavorite = async (songId: number) => {
-        await toggleFavorite(songId);
+        const wasFavorite = songs.find(song => song.id === songId)?.isFavorite;
+        try {
+            await toggleFavorite(songId);
+            toast.success(wasFavorite ? 'Eliminada de favoritos' : 'Añadida a favoritos');
+        } catch {
+            toast.error('No se pudo actualizar favoritos');
+            return;
+        }
         // Actualizar el estado local sin recargar toda la lista
         setSongs(prev => prev.map(s =>
             s.id === songId ? { ...s, isFavorite: !s.isFavorite } : s
         ));
     };
 
-    const hasActiveFilters = selectedArtist || selectedKey || selectedStyle || selectedLetter || search;
+    const hasActiveFilters = selectedArtist || selectedKey || selectedStyle || selectedLetter || search || onlyMySongs;
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-4 pb-24 sm:pb-6">
@@ -251,6 +265,12 @@ export default function SongsPage() {
                             </button>
                         </span>
                     )}
+                    {onlyMySongs && (
+                        <span className="flex items-center gap-1 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full text-sm">
+                            Mis canciones
+                            <button onClick={() => clearFilter('mine')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                        </span>
+                    )}
                     <button
                         onClick={clearAllFilters}
                         className="text-sm text-red-500 hover:text-red-700 px-2 py-1"
@@ -264,7 +284,7 @@ export default function SongsPage() {
             {showFilters && (
                 <div
                     ref={filterRef}
-                    className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-4"
+                    className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-4 grid grid-cols-1 sm:grid-cols-4 gap-4"
                 >
                     <button
                         onClick={() => setShowFilters(false)}
@@ -312,8 +332,18 @@ export default function SongsPage() {
                                     {note}
                                 </option>
                             ))}
+                            {NOTES.map((note) => <option key={`${note}m`} value={`${note}m`}>{note}m</option>)}
                         </select>
                     </div>
+                    <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={onlyMySongs}
+                            onChange={(e) => { setOnlyMySongs(e.target.checked); setPage(1); }}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        Solo mis canciones
+                    </label>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Estilo

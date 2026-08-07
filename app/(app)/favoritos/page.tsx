@@ -9,6 +9,8 @@ import { AddToSetlistModal } from '@/components/AddToSetlistModal';
 import { getUserSetlists } from '@/app/actions/setlists';
 import { getCurrentUser } from '@/app/actions/auth';
 import { SongCard } from '@/components/SongCard';
+import { useAudioCleanup } from '@/hooks/useAudioCleanup';
+import toast from 'react-hot-toast';
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -22,6 +24,7 @@ export default function FavoritesPage() {
   const [selectedSongTitle, setSelectedSongTitle] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
+  useAudioCleanup(audioRef);
 
   useEffect(() => {
     setTitle('Canciones Favoritas');
@@ -47,10 +50,14 @@ export default function FavoritesPage() {
   };
 
   const handleRemoveFavorite = async (songId: number) => {
-    await toggleFavorite(songId);
-    // Recargar lista
-    const updated = await getFavoriteSongs();
-    setFavorites(updated);
+    try {
+      await toggleFavorite(songId);
+      const updated = await getFavoriteSongs();
+      setFavorites(updated);
+      toast.success('Eliminada de favoritos');
+    } catch {
+      toast.error('No se pudo actualizar favoritos');
+    }
   };
 
   const handleAddToList = (songId: number, songTitle: string) => {

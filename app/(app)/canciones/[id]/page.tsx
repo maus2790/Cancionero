@@ -8,10 +8,11 @@ import { getUserSetlists } from '@/app/actions/setlists';
 import { AddToSetlistModal } from '@/components/AddToSetlistModal';
 import ChordModal from '@/components/ChordModal';
 import { transposeChordPro } from '@/lib/chords';
-import { Heart, Trash2, Edit, ListPlus, Type, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2 } from 'lucide-react';
-import Link from 'next/link';
+import { Heart, Trash2, Edit, ListPlus, Type, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, Gauge, Square, MoreHorizontal } from 'lucide-react';
 import { getCurrentUser } from '@/app/actions/auth';
 import { useTitle } from '@/lib/TitleContext';
+import { useAudioCleanup } from '@/hooks/useAudioCleanup';
+import toast from 'react-hot-toast';
 
 // Opciones de tamaño de fuente
 const FONT_SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
@@ -41,6 +42,7 @@ export default function SongDetailPage() {
     const [fontSizeIndex, setFontSizeIndex] = useState(1);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [currentUser, setCurrentUser] = useState<{ id: number; role: string } | null>(null);
 
     // Estado del modal de acordes
     const [selectedChord, setSelectedChord] = useState<any>(null);
@@ -53,11 +55,14 @@ export default function SongDetailPage() {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isPlayerOpen, setIsPlayerOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [showSongMenu, setShowSongMenu] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    useAudioCleanup(audioRef);
 
     const fontSize = FONT_SIZES[fontSizeIndex];
     const fontSizeClass = FONT_SIZE_CLASSES[fontSize];
@@ -71,6 +76,7 @@ export default function SongDetailPage() {
             ]);
             setSong(songData);
             setIsAuthenticated(!!user);
+            setCurrentUser(user ? { id: user.id, role: user.role } : null);
             setLoading(false);
         };
         loadData();
@@ -99,29 +105,44 @@ export default function SongDetailPage() {
         };
     }, [song, setTitle, setShowBack, setOnBack, setHeaderRight, router]);
 
+    const handleHeaderPlayer = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        if (isPlayerOpen) {
+            audio.pause();
+            audio.currentTime = 0;
+            setCurrentTime(0);
+            setIsPlayerOpen(false);
+            return;
+        }
+
+        setIsPlayerOpen(true);
+        void audio.play();
+    };
+
+    const handleBarPlayPause = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (audio.paused) void audio.play();
+        else audio.pause();
+    };
+
     useEffect(() => {
         if (song && song.audioUrl) {
             setHeaderRight(
                 <button
-                    onClick={() => {
-                        if (audioRef.current) {
-                            if (audioRef.current.paused) {
-                                audioRef.current.play();
-                            } else {
-                                audioRef.current.pause();
-                            }
-                        }
-                    }}
+                    onClick={handleHeaderPlayer}
                     className="p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center justify-center"
-                    aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+                    aria-label={isPlayerOpen ? 'Detener reproducción' : 'Reproducir'}
                 >
-                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                    {isPlayerOpen ? <Square className="w-5 h-5" /> : <Play className="w-6 h-6" />}
                 </button>
             );
         } else {
             setHeaderRight(null);
         }
-    }, [song, isPlaying, setHeaderRight]);
+    }, [song, isPlayerOpen, setHeaderRight]);
 
     const makeVisible = useCallback(() => {
         setIsVisible(true);
@@ -158,15 +179,25 @@ export default function SongDetailPage() {
     }, [makeVisible]);
 
     const handleToggleFavorite = async () => {
-        await toggleFavorite(Number(id));
-        setIsFavorite(!isFavorite);
+        try {
+            await toggleFavorite(Number(id));
+            setIsFavorite(!isFavorite);
+            toast.success(isFavorite ? 'Eliminada de favoritos' : 'Añadida a favoritos');
+        } catch {
+            toast.error('No se pudo actualizar favoritos');
+        }
         makeVisible();
     };
 
     const handleDelete = async () => {
         if (confirm('¿Estás seguro de eliminar esta canción?')) {
-            await deleteSong(Number(id));
-            router.push('/canciones');
+            try {
+                await deleteSong(Number(id));
+                toast.success('Canción eliminada');
+                router.push('/canciones');
+            } catch {
+                toast.error('No se pudo eliminar la canción');
+            }
         }
     };
 
@@ -201,7 +232,8 @@ export default function SongDetailPage() {
         }
     };
 
-    const handleRateChange = (rate: number) => {
+    const togglePlaybackRate = () => {
+        const rate = playbackRate === 1 ? 0.5 : 1;
         if (audioRef.current) {
             audioRef.current.playbackRate = rate;
             setPlaybackRate(rate);
@@ -260,6 +292,7 @@ export default function SongDetailPage() {
 
     const transposedContent = transpose !== 0 ? transposeChordPro(song.content, transpose) : song.content;
     const controlsOpacity = (isVisible || isHovering) ? 'opacity-100' : 'opacity-40';
+    const canManageSong = !!currentUser && (currentUser.role === 'admin' || currentUser.id === song.userId);
 
     return (
         <div ref={containerRef} className="bg-gray-50 dark:bg-gray-900">
@@ -276,7 +309,7 @@ export default function SongDetailPage() {
                 />
             )}
 
-            {song.audioUrl && isPlaying && (
+            {song.audioUrl && isPlayerOpen && (
                 <div className="sticky top-0 z-40 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
                     <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
                         <span className="text-xs text-gray-500 font-mono w-10 text-right">
@@ -295,22 +328,28 @@ export default function SongDetailPage() {
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 font-medium">Velocidad:</span>
-                        {[0.5, 1, 1.5, 2].map(rate => (
-                            <button
-                                key={rate}
-                                onClick={() => handleRateChange(rate)}
-                                className={`px-2 py-1 text-xs rounded-md font-semibold transition ${playbackRate === rate ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-                            >
-                                {rate}x
-                            </button>
-                        ))}
+                        <button
+                            onClick={handleBarPlayPause}
+                            className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                            aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+                            title={isPlaying ? 'Pausar' : 'Reproducir'}
+                        >
+                            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                        </button>
+                        <button
+                            onClick={togglePlaybackRate}
+                            className={`p-2 rounded-md transition ${playbackRate === 0.5 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                            aria-label={playbackRate === 1 ? 'Cambiar velocidad a 0.5' : 'Cambiar velocidad a 1'}
+                            title={playbackRate === 1 ? 'Velocidad 0.5' : 'Velocidad 1'}
+                        >
+                            <Gauge className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             )}
 
-            <div className="min-h-screen flex items-center justify-center p-4 sm:p-8">
-                <div className={`max-w-3xl w-full whitespace-pre-wrap ${fontSizeClass} text-gray-800 dark:text-gray-200 leading-relaxed pb-32`}>
+            <div className="min-h-screen overflow-x-auto p-4 sm:p-8">
+                <div className={`mx-auto min-w-max max-w-none whitespace-pre font-mono ${fontSizeClass} text-gray-800 dark:text-gray-200 leading-relaxed pb-32`}>
                     {transposedContent.split('\n').map((line: string, i: number) => {
                         const parts = line.split(/(\[[^\]]+\])/g);
                         return (
@@ -322,7 +361,8 @@ export default function SongDetailPage() {
                                             <button
                                                 key={j}
                                                 onClick={() => handleChordClick(fullChord)}
-                                                className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer focus:outline-none"
+                                                className="inline-block text-left text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer focus:outline-none"
+                                                style={{ width: `${fullChord.length + 2}ch` }}
                                             >
                                                 {fullChord}
                                             </button>
@@ -413,25 +453,40 @@ export default function SongDetailPage() {
                     </span>
                 </button>
 
-                <Link
-                    href={`/canciones/${song.id}/editar`}
-                    className="flex flex-col items-center gap-0.5 group"
-                >
-                    <div className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 transition">
-                        <Edit className="w-4 h-4" />
-                    </div>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">Editar</span>
-                </Link>
+                {canManageSong && <div className="relative flex flex-col items-center gap-0.5">
+                    <button
+                        onClick={() => setShowSongMenu(prev => !prev)}
+                        className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 transition"
+                        aria-label="Más acciones"
+                        aria-expanded={showSongMenu}
+                    >
+                        <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                    <span className="text-[9px] text-gray-500 dark:text-gray-400">Más</span>
 
-                <button
-                    onClick={handleDelete}
-                    className="flex flex-col items-center gap-0.5 group"
-                >
-                    <div className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-red-500 transition">
-                        <Trash2 className="w-4 h-4" />
-                    </div>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">Eliminar</span>
-                </button>
+                    {showSongMenu && (
+                        <div className="absolute right-10 bottom-0 w-44 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
+                            <button
+                                onClick={() => {
+                                    setShowSongMenu(false);
+                                    router.push(`/canciones/${song.id}/editar`);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                <Edit className="w-4 h-4" /> Editar canción
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowSongMenu(false);
+                                    handleDelete();
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                                <Trash2 className="w-4 h-4" /> Eliminar canción
+                            </button>
+                        </div>
+                    )}
+                </div>}
             </div>
 
             <AddToSetlistModal

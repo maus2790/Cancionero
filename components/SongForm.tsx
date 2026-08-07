@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveSong } from '@/app/actions/songs';
+import toast from 'react-hot-toast';
 
 interface SongFormProps {
   initialData?: {
@@ -28,6 +29,7 @@ export function SongForm({ initialData }: SongFormProps) {
       setError(result.error);
       setLoading(false);
     } else {
+      toast.success(initialData?.id ? 'Canción actualizada correctamente' : 'Canción creada correctamente');
       router.push('/canciones');
     }
   };

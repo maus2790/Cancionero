@@ -6,6 +6,7 @@ import { getSongById, saveSong } from '@/app/actions/songs';
 import { Clipboard, ClipboardCheck, Music, Trash2, X } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES } from '@/lib/constants';
+import toast from 'react-hot-toast';
 
 const STYLE_OPTIONS = ['', 'Gozo', 'Adoración', 'Contemporánea', 'Alabanza', 'Balada', 'Ritmo', 'Tradicional', 'Otros'];
 
@@ -74,6 +75,7 @@ export default function EditSongPage() {
             setError(result.error);
             setSaving(false);
         } else {
+            toast.success('Canción actualizada correctamente');
             router.push('/canciones');
         }
     }
@@ -164,7 +166,7 @@ export default function EditSongPage() {
                         </label>
                         <select
                             name="key"
-                            defaultValue={song.key || ''}
+                            defaultValue={(song.key || '').replace(/m$/, '')}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">Seleccionar</option>
@@ -172,6 +174,14 @@ export default function EditSongPage() {
                                 <option key={note} value={note}>{note}</option>
                             ))}
                         </select>
+                        <div className="mt-2 flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="keyMode" value="major" defaultChecked={!song.key?.endsWith('m')} className="text-blue-600" /> Mayor
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="keyMode" value="minor" defaultChecked={song.key?.endsWith('m')} className="text-blue-600" /> Menor
+                            </label>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

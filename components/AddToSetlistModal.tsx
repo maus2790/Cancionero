@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { addSongToSetlist, createSetlist } from '@/app/actions/setlists';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 interface AddToSetlistModalProps {
     isOpen: boolean;
@@ -74,6 +75,7 @@ export function AddToSetlistModal({
 
             // Éxito
             router.refresh();
+            toast.success('Canción agregada a la lista');
             if (onSuccess) onSuccess();
             onClose();
         } catch (err) {

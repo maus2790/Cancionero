@@ -6,6 +6,7 @@ import { getUserSetlists, deleteSetlist, updateSetlist } from '@/app/actions/set
 import Link from 'next/link';
 import { Edit, Trash2, Plus, Music, X } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
+import toast from 'react-hot-toast';
 
 export default function SetlistsPage() {
   const router = useRouter();
@@ -38,15 +39,25 @@ export default function SetlistsPage() {
 
   const handleSaveEdit = async () => {
     if (!editingList) return;
-    await updateSetlist(editingList.id, { name: editName, description: editDescription });
-    setShowModal(false);
-    await loadSetlists();
+    try {
+      await updateSetlist(editingList.id, { name: editName, description: editDescription });
+      setShowModal(false);
+      await loadSetlists();
+      toast.success('Lista actualizada');
+    } catch {
+      toast.error('No se pudo actualizar la lista');
+    }
   };
 
   const handleDelete = async (id: number) => {
     if (confirm('¿Eliminar esta lista?')) {
-      await deleteSetlist(id);
-      await loadSetlists();
+      try {
+        await deleteSetlist(id);
+        await loadSetlists();
+        toast.success('Lista eliminada');
+      } catch {
+        toast.error('No se pudo eliminar la lista');
+      }
     }
   };
 

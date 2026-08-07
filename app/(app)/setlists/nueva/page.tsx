@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSetlist } from '@/app/actions/setlists';
+import toast from 'react-hot-toast';
 
 export default function NewSetlistPage() {
     const router = useRouter();
@@ -15,9 +16,10 @@ export default function NewSetlistPage() {
         setLoading(true);
         try {
             await createSetlist({ name, description });
+            toast.success('Lista creada correctamente');
             router.push('/setlists');
         } catch (error) {
-            alert('Error al crear la lista');
+            toast.error('No se pudo crear la lista');
             setLoading(false);
         }
     };

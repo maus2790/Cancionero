@@ -22,7 +22,7 @@ interface SongCardProps {
 
 export function SongCard({ song, playingId, onPlayPause, isFavorite, onToggleFavorite, onAddToList }: SongCardProps) {
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition border border-gray-200 dark:border-gray-700 p-4">
+        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition border p-4 ${!song.isPublic ? 'border-yellow-400 dark:border-yellow-600 ring-1 ring-yellow-200 dark:ring-yellow-900/50' : 'border-gray-200 dark:border-gray-700'}`}>
             <div className="flex items-start justify-between gap-3">
                 <Link href={`/canciones/${song.id}`} className="flex-1 min-w-0">
                     <h3 className="font-semibold text-base sm:text-lg text-gray-800 dark:text-white truncate">

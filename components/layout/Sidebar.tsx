@@ -73,7 +73,9 @@ export function Sidebar({ isOpen }: SidebarProps) {
                     } transition-opacity duration-200`}
             >
                 {currentNavItems.map(({ href, label, icon: Icon, isSpecial, isBack }: any) => {
-                    const isActive = pathname === href;
+                    const isActive = href === '/'
+                        ? pathname === '/' || pathname === '/dashboard'
+                        : pathname === href;
                     
                     let baseClasses = 'flex items-center gap-3 px-4 py-3 rounded-lg transition ';
                     if (isSpecial) {

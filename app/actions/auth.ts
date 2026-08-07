@@ -178,13 +178,6 @@ export async function handleLogout() {
     redirect('/login');
 }
 
-// ============================================================
-// LOGIN CON GOOGLE (redirige al endpoint)
-// ============================================================
-export async function handleGoogleLogin() {
-    redirect('/api/auth/google');
-}
-
 // app/actions/auth.ts (añadir al final)
 
 // ============================================================
