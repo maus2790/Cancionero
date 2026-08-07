@@ -2,36 +2,69 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Sun, Moon, LogOut, Settings, ArrowLeft } from 'lucide-react';
+import {
+    Menu,
+    Sun,
+    Moon,
+    LogOut,
+    Settings,
+    ArrowLeft,
+    Shield,
+    User,
+} from 'lucide-react';
 import { useTheme } from '@/lib/ThemeProvider';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { handleLogout, getCurrentUser } from '@/app/actions/auth';
 import { useTitle } from '@/lib/TitleContext';
 
-export function Header() {
+export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
     const { theme, toggleTheme } = useTheme();
     const router = useRouter();
+    const pathname = usePathname();
     const { title, showBack, onBack, headerRight } = useTitle();
+
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [userName, setUserName] = useState('Usuario');
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // ✅ NUEVO
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const loadUser = async () => {
             const user = await getCurrentUser();
-            if (user) setUserName(user.name);
+
+            if (user) {
+                setUserName(user.name);
+                setIsAdmin(user.role === 'admin');
+
+                // ✅ NUEVO
+                setAvatarUrl(user.avatarUrl || null);
+            }
         };
+
         loadUser();
     }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
                 setUserMenuOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+
+        return () =>
+            document.removeEventListener(
+                'mousedown',
+                handleClickOutside
+            );
     }, []);
 
     const handleLogoutClick = async () => {
@@ -60,15 +93,16 @@ export function Header() {
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
-                    ) : (
+                    ) : pathname.startsWith('/admin') ? (
                         <button
-                            className="hidden md:block text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition"
-                            onClick={() => console.log('Toggle sidebar')}
+                            className="block md:hidden text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition"
+                            onClick={onToggleSidebar}
                             aria-label="Toggle sidebar"
                         >
                             <Menu className="w-6 h-6" />
                         </button>
-                    )}
+                    ) : null}
+
                     <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 truncate max-w-[150px] sm:max-w-xs">
                         {title}
                     </h1>
@@ -80,6 +114,7 @@ export function Header() {
                             {headerRight}
                         </div>
                     )}
+
                     <button
                         onClick={toggleTheme}
                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
@@ -97,8 +132,18 @@ export function Header() {
                             onClick={toggleUserMenu}
                             className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition focus:outline-none"
                         >
-                            <div className="w-8 h-8 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                                {initials || 'U'}
+                            {/* ✅ AVATAR ACTUALIZADO */}
+                            <div className="w-8 h-8 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                                {avatarUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={avatarUrl}
+                                        alt={userName}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    initials || 'U'
+                                )}
                             </div>
                         </button>
 
@@ -115,8 +160,19 @@ export function Header() {
                                     }}
                                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                                 >
-                                    <Settings className="w-4 h-4" /> Configuración
+                                    <User className="w-4 h-4" /> Perfil
                                 </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => {
+                                            setUserMenuOpen(false);
+                                            router.push('/admin');
+                                        }}
+                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                    >
+                                        <Shield className="w-4 h-4" /> Panel de Admin
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => {
                                         setUserMenuOpen(false);

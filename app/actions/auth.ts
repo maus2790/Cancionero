@@ -1,11 +1,13 @@
 'use server';
 
 import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
-import { redirect } from 'next/navigation';
+import { users, songs, setlists, favorites } from '@/db/schema';
+import { eq, and, sql, count } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import bcrypt from 'bcryptjs';
+import { uploadImage, deleteImage } from '@/lib/r2';
 
 // ============================================================
 // FUNCIONES AUXILIARES
@@ -131,7 +133,7 @@ async function createSession(user: any) {
 }
 
 // ============================================================
-// OBTENER USUARIO ACTUAL (¡ÚNICA DEFINICIÓN!)
+// OBTENER USUARIO ACTUAL (actualizado con avatar)
 // ============================================================
 export async function getCurrentUser() {
     const cookieStore = await cookies();
@@ -140,16 +142,30 @@ export async function getCurrentUser() {
 
     if (!userId) return null;
 
-    const user = await db.select().from(users).where(eq(users.id, parseInt(userId)));
-    if (user.length === 0) return null;
+    const [user] = await db
+        .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            role: users.role,
+            avatarUrl: users.avatarUrl,
+            createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.id, parseInt(userId)));
+
+    if (!user) return null;
 
     return {
-        id: user[0].id,
-        email: user[0].email,
-        name: userName || user[0].name,
-        provider: user[0].provider || 'email',
+        id: user.id,
+        email: user.email,
+        name: userName || user.name,
+        role: user.role || 'user',
+        avatarUrl: user.avatarUrl,
+        createdAt: user.createdAt,
     };
 }
+
 
 // ============================================================
 // CERRAR SESIÓN
@@ -168,3 +184,169 @@ export async function handleLogout() {
 export async function handleGoogleLogin() {
     redirect('/api/auth/google');
 }
+
+// app/actions/auth.ts (añadir al final)
+
+// ============================================================
+// ACTUALIZAR PERFIL (sin imagen, solo datos)
+// ============================================================
+export async function updateProfile(data: {
+    name: string;
+    email: string;
+    password?: string;
+}) {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No autenticado');
+
+    if (data.email !== user.email) {
+        const [existing] = await db
+            .select()
+            .from(users)
+            .where(and(eq(users.email, data.email), sql`${users.id} != ${user.id}`));
+        if (existing) throw new Error('El email ya está en uso');
+    }
+
+    const updateData: any = {
+        name: data.name,
+        email: data.email,
+    };
+
+    if (data.password) {
+        if (data.password.length < 6) {
+            throw new Error('La contraseña debe tener al menos 6 caracteres');
+        }
+        updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
+    const [updated] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, user.id))
+        .returning();
+
+    const cookieStore = await cookies();
+    cookieStore.set('user_name', updated.name, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+    });
+
+    revalidatePath('/perfil');
+    return updated;
+}
+
+// ============================================================
+// OBTENER ESTADÍSTICAS DEL USUARIO
+// ============================================================
+export async function getUserStats() {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No autenticado');
+
+    const [totalSongs] = await db
+        .select({ count: count() })
+        .from(songs)
+        .where(eq(songs.userId, user.id));
+
+    const [totalSetlists] = await db
+        .select({ count: count() })
+        .from(setlists)
+        .where(eq(setlists.userId, user.id));
+
+    const [totalFavorites] = await db
+        .select({ count: count() })
+        .from(favorites)
+        .where(eq(favorites.userId, user.id));
+
+    return {
+        songs: totalSongs?.count || 0,
+        setlists: totalSetlists?.count || 0,
+        favorites: totalFavorites?.count || 0,
+    };
+}
+
+// ============================================================
+// SUBIR/ACTUALIZAR AVATAR
+// ============================================================
+export async function uploadAvatar(formData: FormData) {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No autenticado');
+
+    const file = formData.get('avatar') as File | null;
+    if (!file || file.size === 0) {
+        throw new Error('No se seleccionó ninguna imagen');
+    }
+
+    if (!file.type.startsWith('image/')) {
+        throw new Error('El archivo debe ser una imagen');
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        throw new Error('La imagen no puede superar los 5MB');
+    }
+
+    const [dbUser] = await db.select().from(users).where(eq(users.id, user.id));
+    const oldAvatarUrl = dbUser?.avatarUrl;
+
+    const ext = file.name.split('.').pop() || 'png';
+    const key = `perfiles/${user.id}-${Date.now()}.${ext}`;
+    const newAvatarUrl = await uploadImage(file, key);
+
+    await db.update(users)
+        .set({ avatarUrl: newAvatarUrl })
+        .where(eq(users.id, user.id));
+
+    if (oldAvatarUrl) {
+        try {
+            const publicUrl = process.env.R2_PUBLIC_URL!;
+            const extractKey = (url: string) =>
+                url.startsWith(publicUrl) ? url.slice(publicUrl.length + 1) : url.split('/').slice(-2).join('/');
+            await deleteImage(extractKey(oldAvatarUrl));
+        } catch (e) {
+            console.warn('No se pudo eliminar avatar antiguo:', e);
+        }
+    }
+
+    // Actualizar cookie del nombre (por si cambia)
+    const cookieStore = await cookies();
+    cookieStore.set('user_name', dbUser?.name || user.name, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+    });
+
+    revalidatePath('/perfil');
+    return { avatarUrl: newAvatarUrl };
+}
+
+// ============================================================
+// ELIMINAR AVATAR
+// ============================================================
+export async function removeAvatar() {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No autenticado');
+
+    const [dbUser] = await db.select().from(users).where(eq(users.id, user.id));
+    const oldAvatarUrl = dbUser?.avatarUrl;
+
+    if (oldAvatarUrl) {
+        const publicUrl = process.env.R2_PUBLIC_URL!;
+        const extractKey = (url: string) =>
+            url.startsWith(publicUrl) ? url.slice(publicUrl.length + 1) : url.split('/').slice(-2).join('/');
+        await deleteImage(extractKey(oldAvatarUrl));
+    }
+
+    await db.update(users)
+        .set({ avatarUrl: null })
+        .where(eq(users.id, user.id));
+
+    revalidatePath('/perfil');
+    return { success: true };
+}
+
+
+
+

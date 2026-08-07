@@ -263,7 +263,7 @@ export default function SongDetailPage() {
 
     return (
         <div ref={containerRef} className="bg-gray-50 dark:bg-gray-900">
-            
+
             {song.audioUrl && (
                 <audio
                     ref={audioRef}
@@ -282,11 +282,11 @@ export default function SongDetailPage() {
                         <span className="text-xs text-gray-500 font-mono w-10 text-right">
                             {Math.floor(currentTime / 60)}:{(Math.floor(currentTime % 60)).toString().padStart(2, '0')}
                         </span>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max={duration || 100} 
-                            value={currentTime} 
+                        <input
+                            type="range"
+                            min="0"
+                            max={duration || 100}
+                            value={currentTime}
                             onChange={handleSeek}
                             className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
                         />

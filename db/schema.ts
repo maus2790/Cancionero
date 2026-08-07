@@ -5,10 +5,12 @@ export const users = sqliteTable('users', {
     email: text('email').notNull().unique(),
     password: text('password'),
     name: text('name').notNull(),
+    role: text('role').default('user'),
     provider: text('provider'),
     providerId: text('provider_id'),
     preferences: text('preferences'),
-    createdAt: integer('created_at').notNull().$default(() => Math.floor(Date.now() / 1000)),
+    avatarUrl: text('avatarUrl'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$default(() => new Date()),
 });
 
 export const songs = sqliteTable('songs', {

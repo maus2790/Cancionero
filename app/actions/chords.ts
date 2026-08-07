@@ -1,3 +1,4 @@
+//app/actions/chords.ts
 'use server';
 
 import { db } from '@/db';
@@ -244,7 +245,7 @@ export async function getChordByNameExact(name: string) {
         .where(and(...conditions))
         .orderBy(asc(chords.name))
         .limit(1);
-    
+
     return result[0] || null;
 }
 
