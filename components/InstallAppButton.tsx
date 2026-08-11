@@ -37,10 +37,12 @@ export function InstallAppButton() {
             setPromptEvent(null);
         } else if (isIos) {
             window.alert('En Safari, toca Compartir y después “Agregar a pantalla de inicio”.');
+        } else {
+            window.alert('Para instalar Tu Cancionero, abre el menú de tu navegador y elige “Instalar aplicación” o “Agregar a pantalla de inicio”.');
         }
     };
 
-    if (installed || (!promptEvent && !isIos)) return null;
+    if (installed) return null;
 
     return (
         <button

@@ -6,6 +6,7 @@ import { eq, and, or, like, asc, desc, count, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
 import { uploadFile, generateAudioKey, deleteFile } from '@/lib/r2';
+import { canCreateContent, canManageContent } from '@/lib/permissions';
 
 // ============================================================
 // OBTENER CANCIONES CON FILTROS
@@ -157,6 +158,7 @@ export async function getSongsByLetter(letter: string) {
 export async function saveSong(formData: FormData) {
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
+    if (!canCreateContent(user)) throw new Error('No tienes permisos para crear o modificar canciones');
 
     const id = formData.get('id') ? Number(formData.get('id')) : undefined;
     const title = formData.get('title') as string;
@@ -165,7 +167,8 @@ export async function saveSong(formData: FormData) {
     const key = keyNote ? `${keyNote}${formData.get('keyMode') === 'minor' ? 'm' : ''}` : '';
     const style = formData.get('style') as string;
     const content = formData.get('content') as string;
-    const isPublic = formData.get('isPublic') === 'true';
+    // El catálogo nuevo es compartido; las canciones recién creadas siempre son públicas.
+    const isPublic = id ? formData.get('isPublic') === 'true' : true;
     const audio = formData.get('audio') as File | null;
     const removeAudio = formData.get('removeAudio') === 'true';
 
@@ -179,7 +182,7 @@ export async function saveSong(formData: FormData) {
         // Obtenemos la canción actual para borrar el audio viejo si es necesario
         const existingResult = await db.select({ audioUrl: songs.audioUrl, userId: songs.userId }).from(songs).where(eq(songs.id, id));
         const existingSong = existingResult[0];
-        if (!existingSong || (user.role !== 'admin' && existingSong.userId !== user.id)) {
+        if (!existingSong || !canManageContent(user, existingSong.userId)) {
             throw new Error('No autorizado');
         }
         const existingAudioUrl = existingSong.audioUrl;
@@ -248,7 +251,7 @@ export async function deleteSong(id: number) {
     if (!user) throw new Error('No autenticado');
 
     const song = await getSongById(id);
-    if (!song || (user.role !== 'admin' && song.userId !== user.id)) throw new Error('No autorizado');
+    if (!song || !canManageContent(user, song.userId)) throw new Error('No autorizado');
 
     if (song.audioUrl) {
         try {

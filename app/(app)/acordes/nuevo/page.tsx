@@ -7,7 +7,7 @@ import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
 import { ChordEditorPiano, PianoData } from '@/components/ChordEditorPiano';
 import { ImageDropCrop } from '@/components/ImageDropCrop';
 import { useTitle } from '@/lib/TitleContext';
-import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
+import { NOTE_OPTIONS, CHORD_TYPES, getChordName } from '@/lib/constants';
 import toast from 'react-hot-toast';
 
 function NewChordForm() {
@@ -54,8 +54,8 @@ function NewChordForm() {
         formData.append('name', chordName);
         formData.append('root', selectedNote);
         formData.append('type', selectedType);
-        formData.append('guitarPositions', JSON.stringify(guitarPositions));
-        formData.append('pianoPositions', JSON.stringify(pianoData));
+        if (activeTab === 'guitar') formData.append('guitarPositions', JSON.stringify(guitarPositions));
+        else formData.append('pianoPositions', JSON.stringify(pianoData));
         formData.append('imageFolder', activeTab === 'piano' ? 'piano' : 'chords');
         if (imageFile) {
             formData.append('image', imageFile);
@@ -107,8 +107,8 @@ function NewChordForm() {
                             onChange={(e) => setSelectedNote(e.target.value)}
                             className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800"
                         >
-                            {NOTES.map((note) => (
-                                <option key={note} value={note}>{note}</option>
+                            {NOTE_OPTIONS.map((note) => (
+                                <option key={note.value} value={note.value}>{note.label}</option>
                             ))}
                         </select>
                     </div>

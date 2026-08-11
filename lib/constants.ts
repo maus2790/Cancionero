@@ -1,7 +1,32 @@
 // Notas musicales
-export const NOTES = [
-    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'
-];
+export const NOTE_OPTIONS = [
+    { value: 'C', label: 'C' },
+    { value: 'C#', label: 'C# / Db' },
+    { value: 'D', label: 'D' },
+    { value: 'D#', label: 'D# / Eb' },
+    { value: 'E', label: 'E' },
+    { value: 'F', label: 'F' },
+    { value: 'F#', label: 'F# / Gb' },
+    { value: 'G', label: 'G' },
+    { value: 'G#', label: 'G# / Ab' },
+    { value: 'A', label: 'A' },
+    { value: 'A#', label: 'A# / Bb' },
+    { value: 'B', label: 'B' },
+] as const;
+
+export const NOTES = NOTE_OPTIONS.map(({ value }) => value);
+
+const ENHARMONIC_NOTES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
+const FLAT_NOTES: Record<string, string> = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
+
+export const normalizeNote = (note: string) => ENHARMONIC_NOTES[note] || note;
+
+export const getChordDisplayName = (root: string | null | undefined, type: string | null | undefined, fallback = '') => {
+    const canonicalRoot = normalizeNote(root || fallback.charAt(0));
+    const suffix = type && type !== 'major' ? type : '';
+    const flat = FLAT_NOTES[canonicalRoot];
+    return flat ? `${canonicalRoot}${suffix} / ${flat}${suffix}` : `${canonicalRoot}${suffix}`;
+};
 
 // Tipos de acordes
 export const CHORD_TYPES = [

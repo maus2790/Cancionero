@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { InstallAppButton } from '@/components/InstallAppButton';
+import { canCreateContent } from '@/lib/permissions';
 
 // Componente para tarjeta de estadística
 function StatCard({
@@ -152,12 +153,12 @@ export default function HomePage() {
                     >
                         <Music className="w-4 h-4" /> Explorar canciones
                     </button>
-                    <button
+                    {canCreateContent(user) && <button
                         onClick={() => router.push('/canciones/nueva')}
                         className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition flex items-center gap-2"
                     >
                         <PlusCircle className="w-4 h-4" /> Agregar canción
-                    </button>
+                    </button>}
                     <InstallAppButton />
                 </div>
             </div>

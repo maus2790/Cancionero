@@ -148,6 +148,7 @@ export async function getCurrentUser() {
             email: users.email,
             name: users.name,
             role: users.role,
+            provider: users.provider,
             avatarUrl: users.avatarUrl,
             createdAt: users.createdAt,
         })
@@ -161,6 +162,7 @@ export async function getCurrentUser() {
         email: user.email,
         name: userName || user.name,
         role: user.role || 'user',
+        provider: user.provider,
         avatarUrl: user.avatarUrl,
         createdAt: user.createdAt,
     };

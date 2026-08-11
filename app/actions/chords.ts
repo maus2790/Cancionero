@@ -7,34 +7,26 @@ import { eq, and, like, asc, or, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
 import { uploadImage, deleteImage } from '@/lib/r2';
+import { canCreateContent, canManageContent } from '@/lib/permissions';
+
+function hasGuitarPosition(serialized: string | null | undefined) {
+    try {
+        const value = serialized ? JSON.parse(serialized) : null;
+        return !!value && (value.barre !== null || (Array.isArray(value.fingers) && value.fingers.some((finger: number) => finger >= 0)));
+    } catch { return false; }
+}
+
+function hasPianoPosition(serialized: string | null | undefined) {
+    try {
+        const value = serialized ? JSON.parse(serialized) : null;
+        return Array.isArray(value) ? value.length > 0 : Array.isArray(value?.notes) && value.notes.length > 0;
+    } catch { return false; }
+}
 
 // Obtener todos los acordes (predefinidos + del usuario) - permite duplicados
 export async function getAllChords() {
-    const user = await getCurrentUser();
-    const userId = user?.id;
-
-    if (!userId) {
-        return await db
-            .select()
-            .from(chords)
-            .where(eq(chords.isPredefined, true))
-            .orderBy(asc(chords.name));
-    }
-
-    const userChords = await db
-        .select()
-        .from(chords)
-        .where(eq(chords.userId, userId))
-        .orderBy(asc(chords.name));
-
-    const predefinedChords = await db
-        .select()
-        .from(chords)
-        .where(eq(chords.isPredefined, true))
-        .orderBy(asc(chords.name));
-
-    // Combinar sin eliminar duplicados (permitir varias posiciones)
-    return [...predefinedChords, ...userChords].sort((a, b) => a.name.localeCompare(b.name));
+    // El banco es común: los acordes creados por cualquier usuario son visibles para todos.
+    return await db.select().from(chords).orderBy(asc(chords.name));
 }
 
 // Obtener acorde por ID
@@ -50,12 +42,15 @@ export async function getChordById(id: number) {
 export async function createChord(formData: FormData) {
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
+    if (!canCreateContent(user)) throw new Error('No tienes permisos para crear acordes');
 
     const name = formData.get('name') as string;
     const root = (formData.get('root') as string) || name.charAt(0) || 'C';
     const type = (formData.get('type') as string) || 'major';
     const guitarPositions = formData.get('guitarPositions') as string;
     const pianoPositions = formData.get('pianoPositions') as string;
+    const validGuitarPositions = hasGuitarPosition(guitarPositions) ? guitarPositions : null;
+    const validPianoPositions = hasPianoPosition(pianoPositions) ? pianoPositions : null;
     const imageFile = formData.get('image') as File | null;
     const imageFolder = (formData.get('imageFolder') as string) || 'chords';
     const isPianoImage = imageFolder === 'piano';
@@ -71,8 +66,23 @@ export async function createChord(formData: FormData) {
             or(eq(chords.userId, user.id), eq(chords.isPredefined, true))
         ));
 
-    if (existingChords.length > 0) {
-        throw new Error('Ya existe un acorde con ese nombre. Por favor, edítalo desde el banco de acordes.');
+    const ownChord = existingChords.find((chord) => chord.userId === user.id);
+    if (ownChord) {
+        const addGuitar = validGuitarPositions && !hasGuitarPosition(ownChord.guitarPositions);
+        const addPiano = validPianoPositions && !hasPianoPosition(ownChord.pianoPositions);
+
+        if (!addGuitar && !addPiano) {
+            throw new Error('Ya tienes una posición para ese instrumento en este acorde. Edítala desde el banco de acordes.');
+        }
+
+        const [updatedChord] = await db.update(chords).set({
+            ...(addGuitar ? { guitarPositions: validGuitarPositions } : {}),
+            ...(addPiano ? { pianoPositions: validPianoPositions } : {}),
+            updatedAt: now,
+        }).where(eq(chords.id, ownChord.id)).returning();
+
+        revalidatePath('/acordes');
+        return updatedChord;
     }
 
     // Primero insertamos el acorde para obtener el ID
@@ -82,8 +92,8 @@ export async function createChord(formData: FormData) {
             name,
             root,
             type,
-            guitarPositions: guitarPositions || null,
-            pianoPositions: pianoPositions || null,
+            guitarPositions: validGuitarPositions,
+            pianoPositions: validPianoPositions,
             userId: user.id,
             isPredefined: false,
             createdAt: now,
@@ -119,9 +129,7 @@ export async function updateChord(id: number, formData: FormData) {
         .where(eq(chords.id, id));
 
     if (!chord) throw new Error('Acorde no encontrado');
-    if (chord.userId !== user.id && !chord.isPredefined) {
-        throw new Error('No autorizado');
-    }
+    if (!canManageContent(user, chord.userId)) throw new Error('No autorizado');
 
     const name = formData.get('name') as string;
     const root = (formData.get('root') as string) || name?.charAt(0) || chord.root || 'C';
@@ -193,7 +201,7 @@ export async function deleteChord(id: number) {
         .where(eq(chords.id, id));
 
     if (!chord) throw new Error('Acorde no encontrado');
-    if (chord.userId !== user.id) throw new Error('No autorizado');
+    if (!canManageContent(user, chord.userId)) throw new Error('No autorizado');
 
     // Eliminar ambas imágenes si existen
     const publicUrl = process.env.R2_PUBLIC_URL!;
@@ -209,15 +217,7 @@ export async function deleteChord(id: number) {
 
 // Buscar acordes por nombre
 export async function searchChords(query: string) {
-    const user = await getCurrentUser();
-    const userId = user?.id;
-
     let conditions: any[] = [like(chords.name, `%${query}%`)];
-    if (userId) {
-        conditions.push(or(eq(chords.userId, userId), eq(chords.isPredefined, true)));
-    } else {
-        conditions.push(eq(chords.isPredefined, true));
-    }
 
     return await db
         .select()
@@ -229,15 +229,7 @@ export async function searchChords(query: string) {
 
 // Buscar acorde exacto por nombre
 export async function getChordByNameExact(name: string) {
-    const user = await getCurrentUser();
-    const userId = user?.id;
-
     let conditions: any[] = [eq(chords.name, name)];
-    if (userId) {
-        conditions.push(or(eq(chords.userId, userId), eq(chords.isPredefined, true)));
-    } else {
-        conditions.push(eq(chords.isPredefined, true));
-    }
 
     const result = await db
         .select()
@@ -253,20 +245,6 @@ export async function getChordByNameExact(name: string) {
 // CONTAR ACORDES (para el dashboard)
 // ============================================================
 export async function getChordsCount() {
-    const user = await getCurrentUser();
-    const userId = user?.id;
-
-    if (userId) {
-        const [result] = await db
-            .select({ count: count() })
-            .from(chords)
-            .where(or(eq(chords.isPredefined, true), eq(chords.userId, userId)));
-        return result?.count ?? 0;
-    } else {
-        const [result] = await db
-            .select({ count: count() })
-            .from(chords)
-            .where(eq(chords.isPredefined, true));
-        return result?.count ?? 0;
-    }
+    const [result] = await db.select({ count: count() }).from(chords);
+    return result?.count ?? 0;
 }

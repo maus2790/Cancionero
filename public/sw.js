@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tu-cancionero-v1';
+const CACHE_NAME = 'tu-cancionero-v2';
 const APP_SHELL = ['/offline.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -16,27 +16,44 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const request = event.request;
+  const url = new URL(request.url);
+
+  // Next.js ya gestiona sus recursos de desarrollo. Cachearlos rompe HMR y
+  // puede dejar las navegaciones pendientes cuando una petición de red falla.
+  if (
+    url.origin !== self.location.origin ||
+    self.location.hostname === 'localhost' ||
+    self.location.hostname === '127.0.0.1' ||
+    url.pathname.startsWith('/_next/') ||
+    url.pathname.startsWith('/api/')
+  ) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)));
+          }
           return response;
         })
-        .catch(async () => (await caches.match(request)) || caches.match('/offline.html'))
+        .catch(async () => (await caches.match(request)) || (await caches.match('/offline.html')) || Response.error())
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-      if (new URL(request.url).origin === self.location.origin) {
+  event.respondWith(caches.match(request).then(async (cached) => {
+    if (cached) return cached;
+    try {
+      const response = await fetch(request);
+      if (response.ok) {
         const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)));
       }
       return response;
-    }))
-  );
+    } catch {
+      return Response.error();
+    }
+  }));
 });

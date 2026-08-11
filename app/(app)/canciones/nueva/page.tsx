@@ -245,14 +245,8 @@ export default function NewSongPage() {
                 </div>
 
                 {/* Visibilidad */}
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        name="isPublic"
-                        value="true"
-                        defaultChecked
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">✓</span>
                     <label className="text-sm text-gray-700 dark:text-gray-300">
                         Canción pública (visible para todos)
                     </label>

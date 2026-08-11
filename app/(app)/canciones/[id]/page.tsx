@@ -13,6 +13,7 @@ import { getCurrentUser } from '@/app/actions/auth';
 import { useTitle } from '@/lib/TitleContext';
 import { useAudioCleanup } from '@/hooks/useAudioCleanup';
 import toast from 'react-hot-toast';
+import { canCreateContent, canManageContent, type ContentUser } from '@/lib/permissions';
 
 // Opciones de tamaño de fuente
 const FONT_SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
@@ -42,7 +43,7 @@ export default function SongDetailPage() {
     const [fontSizeIndex, setFontSizeIndex] = useState(1);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [currentUser, setCurrentUser] = useState<{ id: number; role: string } | null>(null);
+    const [currentUser, setCurrentUser] = useState<ContentUser | null>(null);
 
     // Estado del modal de acordes
     const [selectedChord, setSelectedChord] = useState<any>(null);
@@ -85,7 +86,7 @@ export default function SongDetailPage() {
                 setChordOffsets({});
             }
             setIsAuthenticated(!!user);
-            setCurrentUser(user ? { id: user.id, role: user.role } : null);
+            setCurrentUser(user);
             setLoading(false);
         };
         loadData();
@@ -314,7 +315,7 @@ export default function SongDetailPage() {
 
     const transposedContent = transpose !== 0 ? transposeChordPro(song.content, transpose) : song.content;
     const controlsOpacity = (isVisible || isHovering) ? 'opacity-100' : 'opacity-40';
-    const canManageSong = !!currentUser && (currentUser.role === 'admin' || currentUser.id === song.userId);
+    const canManageSong = canManageContent(currentUser, song.userId);
 
     return (
         <div ref={containerRef} className="bg-gray-50 dark:bg-gray-900">
@@ -563,6 +564,8 @@ export default function SongDetailPage() {
                 onClose={() => setIsChordModalOpen(false)}
                 allowToggle={true}
                 initialView="guitar"
+                canCreate={canCreateContent(currentUser)}
+                canManage={canManageContent(currentUser, selectedChord?.userId ?? null)}
             />
         </div>
     );

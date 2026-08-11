@@ -7,7 +7,7 @@ import { ChordEditor, ChordEditorData } from '@/components/ChordEditor';
 import { ChordEditorPiano, PianoData } from '@/components/ChordEditorPiano';
 import { ImageDropCrop } from '@/components/ImageDropCrop';
 import { useTitle } from '@/lib/TitleContext';
-import { NOTES, CHORD_TYPES, getChordName } from '@/lib/constants';
+import { NOTE_OPTIONS, CHORD_TYPES, getChordName, normalizeNote } from '@/lib/constants';
 
 export default function EditChordPage() {
     const { id } = useParams();
@@ -53,7 +53,7 @@ export default function EditChordPage() {
                 const data = await getChordById(Number(id));
                 setChord(data);
                 if (data) {
-                    setSelectedNote(data.root || data.name.charAt(0));
+                    setSelectedNote(normalizeNote(data.root || data.name.charAt(0)));
                     setSelectedType(data.type || 'major');
                     if (data.guitarPositions) {
                         const parsed = JSON.parse(data.guitarPositions);
@@ -100,8 +100,8 @@ export default function EditChordPage() {
         formData.append('name', chordName);
         formData.append('root', selectedNote);
         formData.append('type', selectedType);
-        formData.append('guitarPositions', JSON.stringify(guitarPositions));
-        formData.append('pianoPositions', JSON.stringify(pianoData));
+        if (activeTab === 'guitar') formData.append('guitarPositions', JSON.stringify(guitarPositions));
+        else formData.append('pianoPositions', JSON.stringify(pianoData));
         formData.append('imageFolder', activeTab === 'piano' ? 'piano' : 'chords');
         if (imageFile) formData.append('image', imageFile);
         if (removeImageFlag) formData.append('removeImage', 'true');
@@ -147,7 +147,7 @@ export default function EditChordPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nota *</label>
                         <select value={selectedNote} onChange={(e) => setSelectedNote(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800">
-                            {NOTES.map((note) => (<option key={note} value={note}>{note}</option>))}
+                            {NOTE_OPTIONS.map((note) => (<option key={note.value} value={note.value}>{note.label}</option>))}
                         </select>
                     </div>
                     <div>

@@ -11,6 +11,8 @@ import { SongCard } from '@/components/SongCard';
 import { useTitle } from '@/lib/TitleContext';
 import { useAudioCleanup } from '@/hooks/useAudioCleanup';
 import toast from 'react-hot-toast';
+import { getCurrentUser } from '@/app/actions/auth';
+import { canCreateContent, type ContentUser } from '@/lib/permissions';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const STYLES = ['Adoración', 'Gozo', 'Contemporánea', 'Balada', 'Ritmo', 'Tradicional', 'Otro'];
@@ -39,6 +41,7 @@ export default function SongsPage() {
     const filterRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [playingId, setPlayingId] = useState<number | null>(null);
+    const [currentUser, setCurrentUser] = useState<ContentUser | null>(null);
     useAudioCleanup(audioRef);
     const limit = 10;
 
@@ -57,6 +60,7 @@ export default function SongsPage() {
             }
         };
         loadSetlists();
+        getCurrentUser().then(setCurrentUser);
     }, []);
 
     useEffect(() => {
@@ -444,12 +448,12 @@ export default function SongsPage() {
             </div>
 
             {/* Botón flotante para nueva canción */}
-            <button
+            {canCreateContent(currentUser) && <button
                 onClick={() => router.push('/canciones/nueva')}
                 className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
             >
                 <Plus className="w-6 h-6" />
-            </button>
+            </button>}
 
             {/* Modal para agregar a setlist */}
             <AddToSetlistModal

@@ -130,7 +130,7 @@ export default function ProfilePage() {
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                             }`}>
-                            {user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                            {user.role === 'admin' ? 'Administrador' : user.role === 'creator' ? 'Creador' : 'Usuario'}
                         </span>
                     </div>
                 </div>

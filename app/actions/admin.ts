@@ -7,6 +7,8 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
 import bcrypt from 'bcryptjs';
 
+const VALID_ROLES = new Set(['user', 'creator', 'admin']);
+
 // ============================================================
 // VERIFICAR SI EL USUARIO ES ADMIN
 // ============================================================
@@ -79,6 +81,8 @@ export async function createUser(data: {
 }) {
     const admin = await requireAdmin();
 
+    if (data.role && !VALID_ROLES.has(data.role)) throw new Error('Rol no válido');
+
     if (!data.name || !data.email || !data.password) {
         throw new Error('Todos los campos son obligatorios');
     }
@@ -130,6 +134,8 @@ export async function updateUser(
     }
 ) {
     const admin = await requireAdmin();
+
+    if (data.role !== undefined && !VALID_ROLES.has(data.role)) throw new Error('Rol no válido');
 
     if (admin.id === userId && data.role && data.role !== admin.role) {
         throw new Error('No puedes cambiar tu propio rol');

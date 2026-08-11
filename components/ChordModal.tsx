@@ -6,6 +6,7 @@ import { X, Edit, Trash2, Image as ImageIcon, Plus } from 'lucide-react';
 import { GuitarChordDiagram } from './GuitarChordDiagram';
 import { PianoChordDiagram } from './PianoChordDiagram';
 import { deleteChord } from '@/app/actions/chords';
+import { getChordDisplayName } from '@/lib/constants';
 
 interface ChordModalProps {
     chord: any;
@@ -15,9 +16,12 @@ interface ChordModalProps {
     onDelete?: () => void; // Hacemos opcional onDelete
     initialView?: 'guitar' | 'piano';
     allowToggle?: boolean; // Nuevo prop para permitir alternar entre instrumentos
+    canCreate?: boolean;
+    canManage?: boolean;
+    onEdit?: () => void;
 }
 
-export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete, initialView = 'guitar', allowToggle = false }: ChordModalProps) {
+export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete, initialView = 'guitar', allowToggle = false, canCreate = false, canManage = false, onEdit }: ChordModalProps) {
     const router = useRouter();
     const [showImage, setShowImage] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -47,7 +51,7 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                     <p className="text-center text-gray-500 dark:text-gray-400 mb-6">
                         El acorde <strong>{chordName}</strong> no existe en la base de datos.
                     </p>
-                    <div className="flex justify-center">
+                    {canCreate && <div className="flex justify-center">
                         <button
                             onClick={() => {
                                 router.push(`/acordes/nuevo?name=${encodeURIComponent(chordName || '')}`);
@@ -57,7 +61,7 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                         >
                             <Plus className="w-5 h-5" /> Crear Acorde
                         </button>
-                    </div>
+                    </div>}
                 </div>
             </div>
         );
@@ -91,6 +95,10 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
     };
 
     const handleEdit = () => {
+        if (onEdit) {
+            onEdit();
+            return;
+        }
         const tab = viewMode === 'piano' ? '?tab=piano' : '';
         router.push(`/acordes/editar/${chord.id}${tab}`);
         onClose();
@@ -126,7 +134,7 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                 )}
 
                 <h2 className="text-3xl font-bold text-gray-800 dark:text-white text-center mb-4 mt-2">
-                    {chord.name}
+                    {getChordDisplayName(chord.root, chord.type, chord.name)}
                 </h2>
 
                 <div className="flex justify-center mb-6">
@@ -142,18 +150,18 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-3 mb-4">
-                    <button
+                    {canManage && <button
                         onClick={handleEdit}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                     >
                         <Edit className="w-4 h-4" /> Editar
-                    </button>
-                    <button
+                    </button>}
+                    {canManage && <button
                         onClick={handleDelete}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
                     >
                         <Trash2 className="w-4 h-4" /> Eliminar
-                    </button>
+                    </button>}
                     <button
                         onClick={() => {
                             setShowImage(!showImage);

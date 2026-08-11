@@ -8,6 +8,10 @@ import { useTitle } from '@/lib/TitleContext';
 import { getAllChords, deleteChord } from '@/app/actions/chords';
 import { Plus, X } from 'lucide-react';
 import ChordModal from '@/components/ChordModal';
+import { getCurrentUser } from '@/app/actions/auth';
+import { canCreateContent, canManageContent, type ContentUser } from '@/lib/permissions';
+import { ChordFormModal } from '@/components/ChordFormModal';
+import { getChordDisplayName, NOTE_OPTIONS, normalizeNote } from '@/lib/constants';
 
 export default function ChordsPage() {
   const { setTitle, setShowBack } = useTitle();
@@ -24,6 +28,9 @@ export default function ChordsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedChord, setSelectedChord] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<ContentUser | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingChord, setEditingChord] = useState<any>(null);
 
   const loadChords = async () => {
     setLoading(true);
@@ -39,34 +46,45 @@ export default function ChordsPage() {
 
   useEffect(() => {
     loadChords();
+    getCurrentUser().then(setCurrentUser);
   }, []);
+
+  const canCreate = canCreateContent(currentUser);
 
   const { roots, types } = (() => {
     const rootSet = new Set<string>();
     const typeSet = new Set<string>();
     chordsList.forEach(chord => {
-      const root = chord.root || chord.name.charAt(0);
+      const root = normalizeNote(chord.root || chord.name.charAt(0));
       const type = chord.type || 'major';
       rootSet.add(root);
       typeSet.add(type);
     });
-    return { roots: Array.from(rootSet).sort(), types: Array.from(typeSet).sort() };
+    return { roots: NOTE_OPTIONS.filter((option) => rootSet.has(option.value)), types: Array.from(typeSet).sort() };
   })();
 
   // Filtros activos
   const hasFilters = selectedRoot || selectedType;
   const activeFilters = [];
-  if (selectedRoot) activeFilters.push({ label: `Nota: ${selectedRoot}`, key: 'root', value: selectedRoot });
+  if (selectedRoot) activeFilters.push({ label: `Nota: ${NOTE_OPTIONS.find((option) => option.value === selectedRoot)?.label || selectedRoot}`, key: 'root', value: selectedRoot });
   if (selectedType && selectedType !== 'major') activeFilters.push({ label: `Tipo: ${selectedType}`, key: 'type', value: selectedType });
 
   const filteredChords = chordsList.filter(chord => {
-    const root = chord.root || chord.name.charAt(0);
+    const root = normalizeNote(chord.root || chord.name.charAt(0));
     const type = chord.type || 'major';
     const matchesRoot = selectedRoot ? root === selectedRoot : true;
     const matchesType = selectedType ? type === selectedType : true;
 
-    const hasGuitar = chord.guitarPositions && chord.guitarPositions !== 'null' && chord.guitarPositions !== '[]' && chord.guitarPositions !== '';
-    const hasPiano = chord.pianoPositions && chord.pianoPositions !== 'null' && chord.pianoPositions !== '[]' && chord.pianoPositions !== '';
+    let hasGuitar = false;
+    let hasPiano = false;
+    try {
+      const value = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
+      hasGuitar = !!value && (value.barre !== null || (Array.isArray(value.fingers) && value.fingers.some((finger: number) => finger >= 0)));
+    } catch { /* posición inválida: no se muestra */ }
+    try {
+      const value = chord.pianoPositions ? JSON.parse(chord.pianoPositions) : null;
+      hasPiano = Array.isArray(value) ? value.length > 0 : Array.isArray(value?.notes) && value.notes.length > 0;
+    } catch { /* posición inválida: no se muestra */ }
 
     let matchesView = true;
     if (view === 'guitar') matchesView = !!hasGuitar;
@@ -127,7 +145,7 @@ export default function ChordsPage() {
           >
             <option value="">Notas</option>
             {roots.map(root => (
-              <option key={root} value={root}>{root}</option>
+              <option key={root.value} value={root.value}>{root.label}</option>
             ))}
           </select>
           <select
@@ -179,12 +197,12 @@ export default function ChordsPage() {
       ) : filteredChords.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           No se encontraron acordes.
-          <button
-            onClick={() => router.push(`/acordes/nuevo?tab=${view}`)}
+          {canCreate && <button
+            onClick={() => { setEditingChord(null); setIsFormOpen(true); }}
             className="block mx-auto mt-4 text-blue-600 hover:underline"
           >
             Crear el primer acorde
-          </button>
+          </button>}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -212,7 +230,7 @@ export default function ChordsPage() {
                 onClick={() => handleChordClick(chord)}
               >
                 <span className="text-lg font-bold text-gray-800 dark:text-white mb-2">
-                  {chord.name}
+                  {getChordDisplayName(chord.root, chord.type, chord.name)}
                 </span>
                 <div className="w-full flex justify-center pointer-events-none">
                   {view === 'guitar' ? (
@@ -242,12 +260,12 @@ export default function ChordsPage() {
       )}
 
       {/* Botón flotante para nuevo acorde */}
-      <button
-        onClick={() => router.push(`/acordes/nuevo?tab=${view}`)}
+      {canCreate && <button
+        onClick={() => { setEditingChord(null); setIsFormOpen(true); }}
         className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
       >
         <Plus className="w-6 h-6" />
-      </button>
+      </button>}
 
       {/* Modal */}
       <ChordModal
@@ -256,6 +274,19 @@ export default function ChordsPage() {
         onClose={() => setIsModalOpen(false)}
         onDelete={handleDeleteChord}
         initialView={view}
+        canCreate={canCreate}
+        canManage={canManageContent(currentUser, selectedChord?.userId ?? null)}
+        onEdit={() => { setEditingChord(selectedChord); setIsModalOpen(false); setIsFormOpen(true); }}
+      />
+      <ChordFormModal
+        isOpen={isFormOpen}
+        chord={editingChord}
+        initialInstrument={view}
+        onClose={() => setIsFormOpen(false)}
+        onSaved={(saved) => setChordsList((items) => {
+          const exists = items.some((item) => item.id === saved.id);
+          return exists ? items.map((item) => item.id === saved.id ? saved : item) : [...items, saved];
+        })}
       />
     </div>
   );
