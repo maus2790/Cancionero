@@ -2,10 +2,12 @@
 
 import { db } from '@/db';
 import { setlists, setlistSongs, songs } from '@/db/schema';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
+import { canManageContent } from '@/lib/permissions';
 import { SETLIST_APPEARANCES } from '@/lib/setlistAppearance';
+import { users } from '@/db/schema';
 
 export async function getUserSetlists() {
     const user = await getCurrentUser();
@@ -18,11 +20,42 @@ export async function getUserSetlists() {
             description: setlists.description,
             icon: setlists.icon,
             color: setlists.color,
+            isPublic: setlists.isPublic,
             createdAt: setlists.createdAt,
             songCount: db.$count(setlistSongs, eq(setlistSongs.setlistId, setlists.id)),
         })
         .from(setlists)
         .where(eq(setlists.userId, user.id))
+        .orderBy(desc(setlists.createdAt));
+
+    return result;
+}
+
+export async function getPublicSetlists() {
+    const user = await getCurrentUser();
+
+    const conditions = [eq(setlists.isPublic, true)];
+    if (user && user.provider !== 'guest') {
+        // Exclude own setlists from "public setlists" section
+        conditions.push(ne(setlists.userId, user.id));
+    }
+
+    const result = await db
+        .select({
+            id: setlists.id,
+            name: setlists.name,
+            description: setlists.description,
+            icon: setlists.icon,
+            color: setlists.color,
+            isPublic: setlists.isPublic,
+            createdAt: setlists.createdAt,
+            userId: setlists.userId,
+            userName: users.name,
+            songCount: db.$count(setlistSongs, eq(setlistSongs.setlistId, setlists.id)),
+        })
+        .from(setlists)
+        .leftJoin(users, eq(setlists.userId, users.id))
+        .where(and(...conditions))
         .orderBy(desc(setlists.createdAt));
 
     return result;
@@ -35,9 +68,11 @@ export async function getSetlistById(id: number) {
     const [setlist] = await db
         .select()
         .from(setlists)
-        .where(and(eq(setlists.id, id), eq(setlists.userId, user.id)));
+        .where(eq(setlists.id, id));
 
     if (!setlist) throw new Error('Lista no encontrada');
+    // Usuarios que no son dueños solo pueden verla si es pública
+    if (setlist.userId !== user.id && !setlist.isPublic) throw new Error('Lista no encontrada');
 
     const songsInSetlist = await db
         .select({
@@ -59,9 +94,9 @@ export async function getSetlistById(id: number) {
     };
 }
 
-export async function createSetlist(data: { name: string; description?: string }) {
+export async function createSetlist(data: { name: string; description?: string; isPublic?: boolean }) {
     const user = await getCurrentUser();
-    if (!user) throw new Error('No autenticado');
+    if (!user || user.provider === 'guest') throw new Error('No autorizado');
 
     const appearance = SETLIST_APPEARANCES[Math.floor(Math.random() * SETLIST_APPEARANCES.length)];
     const [newSetlist] = await db
@@ -72,6 +107,7 @@ export async function createSetlist(data: { name: string; description?: string }
             icon: appearance.icon,
             color: appearance.color,
             userId: user.id,
+            isPublic: data.isPublic ?? true,
         })
         .returning();
 
@@ -79,18 +115,22 @@ export async function createSetlist(data: { name: string; description?: string }
     return newSetlist;
 }
 
-export async function updateSetlist(id: number, data: { name?: string; description?: string }) {
+export async function updateSetlist(id: number, data: { name?: string; description?: string; isPublic?: boolean }) {
     const user = await getCurrentUser();
     if (!user) throw new Error('No autenticado');
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) updateData.description = data.description;
+    if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
+
+    const [setlist] = await db.select().from(setlists).where(eq(setlists.id, id));
+    if (!setlist || !canManageContent(user, setlist.userId, setlist.isPublic ?? false)) throw new Error('Lista no encontrada o no autorizado');
 
     const [updated] = await db
         .update(setlists)
         .set(updateData)
-        .where(and(eq(setlists.id, id), eq(setlists.userId, user.id)))
+        .where(eq(setlists.id, id))
         .returning();
 
     if (!updated) throw new Error('Lista no encontrada');
@@ -105,9 +145,12 @@ export async function deleteSetlist(id: number) {
 
     await db.delete(setlistSongs).where(eq(setlistSongs.setlistId, id));
 
+    const [setlist] = await db.select().from(setlists).where(eq(setlists.id, id));
+    if (!setlist || !canManageContent(user, setlist.userId, setlist.isPublic ?? false)) throw new Error('Lista no encontrada o no autorizado');
+
     const [deleted] = await db
         .delete(setlists)
-        .where(and(eq(setlists.id, id), eq(setlists.userId, user.id)))
+        .where(eq(setlists.id, id))
         .returning();
 
     if (!deleted) throw new Error('Lista no encontrada');
@@ -127,9 +170,9 @@ export async function addSongToSetlist(data: {
     const [setlist] = await db
         .select()
         .from(setlists)
-        .where(and(eq(setlists.id, data.setlistId), eq(setlists.userId, user.id)));
+        .where(eq(setlists.id, data.setlistId));
 
-    if (!setlist) throw new Error('Lista no encontrada');
+    if (!setlist || !canManageContent(user, setlist.userId, setlist.isPublic ?? false)) throw new Error('Lista no encontrada o no autorizado');
 
     const [existing] = await db
         .select()
@@ -185,9 +228,9 @@ export async function updateSongInSetlist(
     const [setlist] = await db
         .select()
         .from(setlists)
-        .where(and(eq(setlists.id, entry.setlistId), eq(setlists.userId, user.id)));
+        .where(eq(setlists.id, entry.setlistId));
 
-    if (!setlist) throw new Error('No autorizado');
+    if (!setlist || !canManageContent(user, setlist.userId, setlist.isPublic ?? false)) throw new Error('No autorizado');
 
     const updateData: any = {};
     if (data.transposition !== undefined) updateData.transposition = data.transposition;
@@ -210,9 +253,9 @@ export async function reorderSetlistSongs(setlistId: number, orderedIds: number[
     const [setlist] = await db
         .select()
         .from(setlists)
-        .where(and(eq(setlists.id, setlistId), eq(setlists.userId, user.id)));
+        .where(eq(setlists.id, setlistId));
 
-    if (!setlist) throw new Error('No autorizado');
+    if (!setlist || !canManageContent(user, setlist.userId, setlist.isPublic ?? false)) throw new Error('No autorizado');
 
     await db.transaction(async (tx) => {
         for (let i = 0; i < orderedIds.length; i++) {
@@ -240,9 +283,9 @@ export async function removeSongFromSetlist(setlistSongId: number) {
     const [setlist] = await db
         .select()
         .from(setlists)
-        .where(and(eq(setlists.id, entry.setlistId), eq(setlists.userId, user.id)));
+        .where(eq(setlists.id, entry.setlistId));
 
-    if (!setlist) throw new Error('No autorizado');
+    if (!setlist || !canManageContent(user, setlist.userId, setlist.isPublic ?? false)) throw new Error('No autorizado');
 
     await db.delete(setlistSongs).where(eq(setlistSongs.id, setlistSongId));
 

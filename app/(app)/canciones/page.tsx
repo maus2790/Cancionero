@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSongs, getArtists, getStyles, toggleFavorite } from '@/app/actions/songs';
+import { getSongs, getArtists, getStyles, toggleFavorite, hasUserSongs } from '@/app/actions/songs';
 import { Search, Plus, Heart, Filter, X, ListPlus, Play, Pause } from 'lucide-react';
 import Link from 'next/link';
 import { AddToSetlistModal } from '@/components/AddToSetlistModal';
@@ -42,6 +42,7 @@ export default function SongsPage() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [playingId, setPlayingId] = useState<number | null>(null);
     const [currentUser, setCurrentUser] = useState<ContentUser | null>(null);
+    const [userHasSongs, setUserHasSongs] = useState(false);
     useAudioCleanup(audioRef);
     const limit = 10;
 
@@ -61,6 +62,7 @@ export default function SongsPage() {
         };
         loadSetlists();
         getCurrentUser().then(setCurrentUser);
+        hasUserSongs().then(setUserHasSongs);
     }, []);
 
     useEffect(() => {
@@ -339,15 +341,17 @@ export default function SongsPage() {
                             {NOTES.map((note) => <option key={`${note}m`} value={`${note}m`}>{note}m</option>)}
                         </select>
                     </div>
-                    <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={onlyMySongs}
-                            onChange={(e) => { setOnlyMySongs(e.target.checked); setPage(1); }}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        Solo mis canciones
-                    </label>
+                    {userHasSongs && (
+                        <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={onlyMySongs}
+                                onChange={(e) => { setOnlyMySongs(e.target.checked); setPage(1); }}
+                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            Solo mis canciones
+                        </label>
+                    )}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Estilo

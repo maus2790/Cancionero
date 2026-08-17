@@ -91,6 +91,18 @@ export async function getSongs(
     };
 }
 
+export async function hasUserSongs() {
+    const user = await getCurrentUser();
+    if (!user || user.provider === 'guest') return false;
+
+    const result = await db
+        .select({ count: count() })
+        .from(songs)
+        .where(eq(songs.userId, user.id));
+
+    return (result[0]?.count || 0) > 0;
+}
+
 
 // ============================================================
 // OBTENER UNA CANCIÓN POR ID
@@ -171,6 +183,7 @@ export async function saveSong(formData: FormData) {
     const isPublic = id ? formData.get('isPublic') === 'true' : true;
     const audio = formData.get('audio') as File | null;
     const removeAudio = formData.get('removeAudio') === 'true';
+    const videoUrl = formData.get('videoUrl') as string | null;
 
     if (!title || !content) {
         return { error: 'Título y contenido son obligatorios' };
@@ -180,9 +193,9 @@ export async function saveSong(formData: FormData) {
 
     if (id) {
         // Obtenemos la canción actual para borrar el audio viejo si es necesario
-        const existingResult = await db.select({ audioUrl: songs.audioUrl, userId: songs.userId }).from(songs).where(eq(songs.id, id));
+        const existingResult = await db.select({ audioUrl: songs.audioUrl, userId: songs.userId, isPublic: songs.isPublic }).from(songs).where(eq(songs.id, id));
         const existingSong = existingResult[0];
-        if (!existingSong || !canManageContent(user, existingSong.userId)) {
+        if (!existingSong || !canManageContent(user, existingSong.userId, existingSong.isPublic ?? false)) {
             throw new Error('No autorizado');
         }
         const existingAudioUrl = existingSong.audioUrl;
@@ -214,6 +227,7 @@ export async function saveSong(formData: FormData) {
                 style: style || null,
                 content,
                 isPublic,
+                videoUrl: videoUrl || null,
                 ...(finalAudioUrl !== undefined ? { audioUrl: finalAudioUrl } : {}),
                 updatedAt: Math.floor(Date.now() / 1000),
             })
@@ -226,6 +240,7 @@ export async function saveSong(formData: FormData) {
             style: style || null,
             content,
             isPublic,
+            videoUrl: videoUrl || null,
             userId: user.id,
         }).returning({ id: songs.id });
         insertedId = result[0].id;
@@ -251,7 +266,7 @@ export async function deleteSong(id: number) {
     if (!user) throw new Error('No autenticado');
 
     const song = await getSongById(id);
-    if (!song || !canManageContent(user, song.userId)) throw new Error('No autorizado');
+    if (!song || !canManageContent(user, song.userId, song.isPublic ?? false)) throw new Error('No autorizado');
 
     if (song.audioUrl) {
         try {

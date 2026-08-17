@@ -13,8 +13,6 @@ import {
     Guitar,
     ListMusic,
     Heart,
-    TrendingUp,
-    Clock,
     ArrowRight,
     PlusCircle
 } from 'lucide-react';
@@ -146,19 +144,21 @@ export default function HomePage() {
                 <p className="text-blue-100 mt-1">
                     Organiza tus canciones, acordes y listas desde un solo lugar.
                 </p>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                     <button
                         onClick={() => router.push('/canciones')}
-                        className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition flex items-center gap-2"
+                        className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition flex items-center gap-1.5"
                     >
-                        <Music className="w-4 h-4" /> Explorar canciones
+                        <Music className="w-3.5 h-3.5" /> Explorar canciones
                     </button>
-                    {canCreateContent(user) && <button
-                        onClick={() => router.push('/canciones/nueva')}
-                        className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition flex items-center gap-2"
-                    >
-                        <PlusCircle className="w-4 h-4" /> Agregar canción
-                    </button>}
+                    {canCreateContent(user) && (
+                        <button
+                            onClick={() => router.push('/canciones/nueva')}
+                            className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition flex items-center gap-1.5"
+                        >
+                            <PlusCircle className="w-3.5 h-3.5" /> Agregar canción
+                        </button>
+                    )}
                     <InstallAppButton />
                 </div>
             </div>

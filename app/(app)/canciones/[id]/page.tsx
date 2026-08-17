@@ -315,7 +315,7 @@ export default function SongDetailPage() {
 
     const transposedContent = transpose !== 0 ? transposeChordPro(song.content, transpose) : song.content;
     const controlsOpacity = (isVisible || isHovering) ? 'opacity-100' : 'opacity-40';
-    const canManageSong = canManageContent(currentUser, song.userId);
+    const canManageSong = canManageContent(currentUser, song.userId, song.isPublic ?? false);
 
     return (
         <div ref={containerRef} className="bg-gray-50 dark:bg-gray-900">

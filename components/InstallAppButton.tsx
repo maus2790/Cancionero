@@ -48,9 +48,9 @@ export function InstallAppButton() {
         <button
             type="button"
             onClick={install}
-            className="px-4 py-2 bg-cyan-400/25 hover:bg-cyan-300/35 border border-cyan-100/40 rounded-lg text-sm font-medium transition flex items-center gap-2"
+            className="px-3 py-1.5 bg-cyan-400/25 hover:bg-cyan-300/35 border border-cyan-100/40 rounded-lg text-xs font-medium transition flex items-center gap-1.5"
         >
-            <Download className="w-4 h-4" /> Instalar app
+            <Download className="w-3.5 h-3.5" /> Instalar app
         </button>
     );
 }

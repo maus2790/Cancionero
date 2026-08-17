@@ -253,6 +253,20 @@ export default function EditSongPage() {
                     )}
                 </div>
 
+                {/* Video */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        URL del Video (YouTube, etc.)
+                    </label>
+                    <input
+                        type="url"
+                        name="videoUrl"
+                        defaultValue={song.videoUrl || ''}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                </div>
+
                 {/* Contenido */}
                 <div>
                     <div className="flex items-center justify-between mb-1">

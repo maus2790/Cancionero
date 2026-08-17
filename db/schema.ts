@@ -25,6 +25,7 @@ export const songs = sqliteTable('songs', {
     userId: integer('user_id').references(() => users.id),
     isPublic: integer('is_public', { mode: 'boolean' }).default(true),
     audioUrl: text('audio_url'),
+    videoUrl: text('video_url'),
     chordPositions: text('chord_positions'),
 });
 
@@ -34,6 +35,7 @@ export const setlists = sqliteTable('setlists', {
     description: text('description'),
     icon: text('icon'),
     color: text('color'),
+    isPublic: integer('is_public', { mode: 'boolean' }).default(true),
     userId: integer('user_id').references(() => users.id).notNull(),
     createdAt: integer('created_at').notNull().$default(() => Math.floor(Date.now() / 1000)),
 });

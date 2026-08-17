@@ -31,6 +31,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [userName, setUserName] = useState('Usuario');
     const [isAdmin, setIsAdmin] = useState(false);
+    const [userRoleDisplay, setUserRoleDisplay] = useState('Usuario');
 
     // ✅ NUEVO
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -44,6 +45,12 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
             if (user) {
                 setUserName(user.name);
                 setIsAdmin(user.role === 'admin');
+                const roleMap: Record<string, string> = {
+                    admin: 'Administrador',
+                    creator: 'Creador',
+                    user: 'Usuario'
+                };
+                setUserRoleDisplay(roleMap[user.role || 'user'] || 'Usuario');
 
                 // ✅ NUEVO
                 setAvatarUrl(user.avatarUrl || null);
@@ -175,7 +182,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 overflow-hidden">
                                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                                     <p className="text-sm font-semibold text-gray-800 dark:text-white">{userName}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Usuario</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{userRoleDisplay}</p>
                                 </div>
                                 <button
                                     onClick={() => {
