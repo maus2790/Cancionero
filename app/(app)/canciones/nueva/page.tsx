@@ -52,17 +52,31 @@ export default function NewSongPage() {
         e.preventDefault();
         setLoading(true);
         setError('');
+
+        if (audioFile && audioFile.size > 20 * 1024 * 1024) {
+            setError('El archivo de audio es demasiado grande. El límite máximo es 20 MB.');
+            setLoading(false);
+            return;
+        }
+
         const formData = new FormData(e.currentTarget);
         if (audioFile) {
             formData.set('audio', audioFile);
         }
-        const result = await saveSong(formData);
-        if (result?.error) {
-            setError(result.error);
+
+        try {
+            const result = await saveSong(formData);
+            if (result?.error) {
+                setError(result.error);
+                setLoading(false);
+            } else {
+                toast.success('Canción creada correctamente');
+                router.push('/canciones');
+            }
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'Error al guardar la canción. Es posible que el archivo sea demasiado grande o haya un problema de conexión.');
             setLoading(false);
-        } else {
-            toast.success('Canción creada correctamente');
-            router.push('/canciones');
         }
     }
 
