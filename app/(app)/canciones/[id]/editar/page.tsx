@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { getSongById, saveSong } from '@/app/actions/songs';
+import { getSongById, saveSong, getDirectUploadUrl } from '@/app/actions/songs';
 import { getCurrentUser } from '@/app/actions/auth';
 import { Clipboard, ClipboardCheck, Music, Trash2, X } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
@@ -81,9 +81,27 @@ export default function EditSongPage() {
         const formData = new FormData(e.currentTarget);
         formData.append('id', String(id));
         if (removeAudio) formData.append('removeAudio', 'true');
-        if (newAudioFile) formData.set('audio', newAudioFile);
 
         try {
+            if (newAudioFile) {
+                const ext = newAudioFile.name.split('.').pop() || 'mp3';
+                const { uploadUrl, publicUrl } = await getDirectUploadUrl('music', ext, newAudioFile.type);
+                
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: newAudioFile,
+                    headers: {
+                        'Content-Type': newAudioFile.type,
+                    },
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error('Error al subir el archivo de audio directamente a la nube.');
+                }
+
+                formData.set('audioUrl', publicUrl);
+            }
+
             const result = await saveSong(formData);
             if (result?.error) {
                 setError(result.error);
@@ -265,7 +283,7 @@ export default function EditSongPage() {
                             ref={fileInputRef}
                             type="file"
                             name="audio"
-                            accept="audio/*"
+                            accept="audio/*,.mpeg,.mp3,.wav,.ogg,.m4a"
                             onChange={handleNewAudioChange}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
                         />

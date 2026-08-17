@@ -1,11 +1,12 @@
 'use server';
 
+import crypto from 'crypto';
 import { db } from '@/db';
 import { songs, favorites, setlistSongs } from '@/db/schema';
 import { eq, and, or, like, asc, desc, count, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
-import { uploadFile, generateAudioKey, deleteFile } from '@/lib/r2';
+import { uploadFile, generateAudioKey, deleteFile, getSignedUploadUrl } from '@/lib/r2';
 import { canCreateContent, canManageContent } from '@/lib/permissions';
 
 // ============================================================
@@ -181,7 +182,7 @@ export async function saveSong(formData: FormData) {
     const content = formData.get('content') as string;
     // El catálogo nuevo es compartido; las canciones recién creadas siempre son públicas.
     const isPublic = id ? formData.get('isPublic') === 'true' : true;
-    const audio = formData.get('audio') as File | null;
+    const audioUrl = formData.get('audioUrl') as string | null;
     const removeAudio = formData.get('removeAudio') === 'true';
     const videoUrl = formData.get('videoUrl') as string | null;
 
@@ -202,8 +203,8 @@ export async function saveSong(formData: FormData) {
 
         let finalAudioUrl: string | null | undefined = undefined;
 
-        if (removeAudio || (audio && audio.size > 0)) {
-            if (existingAudioUrl) {
+        if (removeAudio || audioUrl) {
+            if (existingAudioUrl && existingAudioUrl !== audioUrl) {
                 try {
                     // Extraer key de la URL, asumiendo formato url/music/archivo.mp3
                     const parts = existingAudioUrl.split('/');
@@ -215,7 +216,13 @@ export async function saveSong(formData: FormData) {
                     console.error("Error al eliminar audio antiguo", e);
                 }
             }
-            finalAudioUrl = null;
+            if (removeAudio) {
+                finalAudioUrl = null;
+            }
+        }
+        
+        if (audioUrl) {
+            finalAudioUrl = audioUrl;
         }
 
         await db
@@ -246,16 +253,32 @@ export async function saveSong(formData: FormData) {
         insertedId = result[0].id;
     }
 
-    // Subir nuevo audio si existe
-    if (audio && audio.size > 0 && insertedId) {
-        const ext = audio.name.split('.').pop() || 'mp3';
-        const key = generateAudioKey(insertedId, ext);
-        const audioUrl = await uploadFile(audio, key);
+    // Subir nuevo audio si existe (Logica antigua eliminada)
+    if (audioUrl && !id && insertedId) {
+        // En caso de creación nueva, agregamos la URL generada en el paso previo
         await db.update(songs).set({ audioUrl }).where(eq(songs.id, insertedId));
     }
 
     revalidatePath('/canciones');
     return { success: true, action: id ? 'updated' : 'created', id: insertedId };
+}
+
+// ============================================================
+// OBTENER URL FIRMADA PARA SUBIDA DIRECTA
+// ============================================================
+export async function getDirectUploadUrl(prefix: string, extension: string, contentType: string) {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('No autenticado');
+    if (!canCreateContent(user)) throw new Error('No autorizado');
+    
+    const hash = crypto.randomBytes(16).toString('hex');
+    const key = `${prefix}/${Date.now()}-${hash}.${extension}`;
+    
+    const uploadUrl = await getSignedUploadUrl(key, contentType);
+    const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!;
+    const publicUrl = `${R2_PUBLIC_URL}/${key}`;
+    
+    return { uploadUrl, publicUrl };
 }
 
 // ============================================================

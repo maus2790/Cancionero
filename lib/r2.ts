@@ -62,3 +62,14 @@ export async function getSignedImageUrl(key: string, expiresIn: number = 3600) {
     });
     return await getSignedUrl(s3Client, command, { expiresIn });
 }
+
+// Generar URL firmada para subidas directas desde el cliente
+export async function getSignedUploadUrl(key: string, contentType: string, expiresIn: number = 3600) {
+    const command = new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: key,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000',
+    });
+    return await getSignedUrl(s3Client, command, { expiresIn });
+}
