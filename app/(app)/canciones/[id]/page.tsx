@@ -509,15 +509,17 @@ export default function SongDetailPage() {
 
                     {showSongMenu && (
                         <div className="absolute right-10 bottom-0 w-52 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
-                            <button
-                                onClick={() => {
-                                    setShowSongMenu(false);
-                                    setIsEditingChordPositions(true);
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            >
-                                Editar posición de notas
-                            </button>
+                            {canCreateContent(currentUser) && (
+                                <button
+                                    onClick={() => {
+                                        setShowSongMenu(false);
+                                        setIsEditingChordPositions(true);
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                    Editar posición de notas
+                                </button>
+                            )}
                             {canManageSong && <>
                             <button
                                 onClick={() => {

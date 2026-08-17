@@ -11,8 +11,8 @@ export function canManageContent(user: ContentUser | null | undefined, ownerId: 
     // Si el usuario es el dueño del contenido, puede gestionarlo
     if (user.id === ownerId) return true;
     
-    // Creadores pueden gestionar cualquier contenido público
-    if (user.role === 'creator' && isPublic) return true;
+    // Creadores pueden gestionar cualquier contenido (público o privado)
+    if (user.role === 'creator') return true;
     
     return false;
 }

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { getSongById, saveSong } from '@/app/actions/songs';
+import { getCurrentUser } from '@/app/actions/auth';
 import { Clipboard, ClipboardCheck, Music, Trash2, X } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
 import { NOTES } from '@/lib/constants';
@@ -28,6 +29,7 @@ export default function EditSongPage() {
     const [removeAudio, setRemoveAudio] = useState(false);
     const [content, setContent] = useState('');
     const [pasted, setPasted] = useState(false);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
     const [newAudioPreviewUrl, setNewAudioPreviewUrl] = useState<string | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,12 +42,15 @@ export default function EditSongPage() {
                 router.push('/canciones');
                 return;
             }
+            
+            const user = await getCurrentUser();
             setSong(data);
+            setCurrentUser(user);
             setContent(data.content || '');
             setLoading(false);
         };
         loadSong();
-    }, [id]);
+    }, [id, router]);
 
     useEffect(() => {
         if (song) {
@@ -304,18 +309,37 @@ export default function EditSongPage() {
                 </div>
 
                 {/* Visibilidad */}
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        name="isPublic"
-                        value="true"
-                        defaultChecked={song.isPublic}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
-                        Canción pública (visible para todos)
-                    </label>
-                </div>
+                {(!currentUser || currentUser.id === song.userId || currentUser.role === 'admin') ? (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            name="isPublic"
+                            value="true"
+                            defaultChecked={song.isPublic}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            Canción pública (visible para todos)
+                        </label>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="hidden"
+                            name="isPublic"
+                            value={song.isPublic ? "true" : "false"}
+                        />
+                        <input
+                            type="checkbox"
+                            checked={song.isPublic}
+                            disabled
+                            className="w-4 h-4 text-gray-400 rounded"
+                        />
+                        <label className="text-sm text-gray-500 dark:text-gray-400">
+                            Canción pública (sólo el propietario puede cambiar esto)
+                        </label>
+                    </div>
+                )}
 
                 <button
                     type="submit"

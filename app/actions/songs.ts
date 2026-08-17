@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/db';
-import { songs, favorites } from '@/db/schema';
+import { songs, favorites, setlistSongs } from '@/db/schema';
 import { eq, and, or, like, asc, desc, count, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
@@ -280,6 +280,10 @@ export async function deleteSong(id: number) {
         }
     }
 
+    // Eliminar las relaciones de clave foránea antes de eliminar la canción
+    await db.delete(setlistSongs).where(eq(setlistSongs.songId, id));
+    await db.delete(favorites).where(eq(favorites.songId, id));
+    
     await db.delete(songs).where(eq(songs.id, id));
     revalidatePath('/canciones');
     return { success: true };
