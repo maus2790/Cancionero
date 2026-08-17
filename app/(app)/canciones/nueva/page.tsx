@@ -59,6 +59,12 @@ export default function NewSongPage() {
             return;
         }
 
+        if (audioFile && !audioFile.type.startsWith('audio/') && !audioFile.name.toLowerCase().endsWith('.mpeg')) {
+            setError('Por favor, selecciona un archivo de audio válido (no se permiten videos).');
+            setLoading(false);
+            return;
+        }
+
         const formData = new FormData(e.currentTarget);
         
         try {

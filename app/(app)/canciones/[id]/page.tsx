@@ -8,7 +8,7 @@ import { getUserSetlists } from '@/app/actions/setlists';
 import { AddToSetlistModal } from '@/components/AddToSetlistModal';
 import ChordModal from '@/components/ChordModal';
 import { transposeChordPro } from '@/lib/chords';
-import { Heart, Trash2, Edit, ListPlus, Type, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, Gauge, Square, MoreHorizontal } from 'lucide-react';
+import { Heart, Trash2, Edit, ListPlus, Type, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, Gauge, Square, MoreHorizontal, Video, Loader2 } from 'lucide-react';
 import { getCurrentUser } from '@/app/actions/auth';
 import { useTitle } from '@/lib/TitleContext';
 import { useAudioCleanup } from '@/hooks/useAudioCleanup';
@@ -39,6 +39,8 @@ export default function SongDetailPage() {
     const { setTitle, setShowBack, setOnBack, setHeaderRight } = useTitle();
     const [song, setSong] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+
+
     const [transpose, setTranspose] = useState(0);
     const [fontSizeIndex, setFontSizeIndex] = useState(1);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -56,6 +58,7 @@ export default function SongDetailPage() {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
     const [isPlayerOpen, setIsPlayerOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -128,14 +131,19 @@ export default function SongDetailPage() {
         }
 
         setIsPlayerOpen(true);
-        void audio.play();
+        setIsBuffering(true);
+        audio.play().catch(() => setIsBuffering(false));
     };
 
     const handleBarPlayPause = () => {
         const audio = audioRef.current;
         if (!audio) return;
-        if (audio.paused) void audio.play();
-        else audio.pause();
+        if (audio.paused) {
+            setIsBuffering(true);
+            audio.play().catch(() => setIsBuffering(false));
+        } else {
+            audio.pause();
+        }
     };
 
     useEffect(() => {
@@ -324,8 +332,12 @@ export default function SongDetailPage() {
                 <audio
                     ref={audioRef}
                     src={song.audioUrl}
+                    preload="none"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
+                    onWaiting={() => setIsBuffering(true)}
+                    onCanPlay={() => setIsBuffering(false)}
+                    onPlaying={() => setIsBuffering(false)}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                     onEnded={() => setIsPlaying(false)}
@@ -333,9 +345,9 @@ export default function SongDetailPage() {
             )}
 
             {song.audioUrl && isPlayerOpen && (
-                <div className="sticky top-0 z-40 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
-                    <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
-                        <span className="text-xs text-gray-500 font-mono w-10 text-right">
+                <div className="sticky top-0 z-40 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 flex flex-row items-center gap-2 sm:gap-4 shadow-sm">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-[10px] sm:text-xs text-gray-500 font-mono w-8 sm:w-10 text-right shrink-0">
                             {Math.floor(currentTime / 60)}:{(Math.floor(currentTime % 60)).toString().padStart(2, '0')}
                         </span>
                         <input
@@ -344,20 +356,27 @@ export default function SongDetailPage() {
                             max={duration || 100}
                             value={currentTime}
                             onChange={handleSeek}
-                            className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+                            className="flex-1 min-w-0 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
                         />
-                        <span className="text-xs text-gray-500 font-mono w-10">
+                        <span className="text-[10px] sm:text-xs text-gray-500 font-mono w-8 sm:w-10 shrink-0">
                             {Math.floor(duration / 60)}:{(Math.floor(duration % 60)).toString().padStart(2, '0')}
                         </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         <button
                             onClick={handleBarPlayPause}
                             className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                             aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
                             title={isPlaying ? 'Pausar' : 'Reproducir'}
+                            disabled={isBuffering}
                         >
-                            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                            {isBuffering ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+                            ) : isPlaying ? (
+                                <Pause className="w-4 h-4" />
+                            ) : (
+                                <Play className="w-4 h-4" />
+                            )}
                         </button>
                         <button
                             onClick={togglePlaybackRate}
@@ -518,6 +537,17 @@ export default function SongDetailPage() {
                                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                     Editar posición de notas
+                                </button>
+                            )}
+                            {song.videoUrl && (
+                                <button
+                                    onClick={() => {
+                                        setShowSongMenu(false);
+                                        window.open(song.videoUrl, '_blank');
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                >
+                                    <Video className="w-4 h-4" /> Ver video
                                 </button>
                             )}
                             {canManageSong && <>

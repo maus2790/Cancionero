@@ -78,6 +78,12 @@ export default function EditSongPage() {
             return;
         }
 
+        if (newAudioFile && !newAudioFile.type.startsWith('audio/') && !newAudioFile.name.toLowerCase().endsWith('.mpeg')) {
+            setError('Por favor, selecciona un archivo de audio válido (no se permiten videos).');
+            setSaving(false);
+            return;
+        }
+
         const formData = new FormData(e.currentTarget);
         formData.append('id', String(id));
         if (removeAudio) formData.append('removeAudio', 'true');
