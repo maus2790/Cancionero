@@ -16,7 +16,7 @@ import { getSongs } from '@/app/actions/songs';
 import { getCurrentUser } from '@/app/actions/auth';
 import {
     Edit, Trash2, Plus, Music, X, Guitar, Headphones,
-    MicVocal, Disc3, Radio, GripVertical, Loader2, Globe, Lock,
+    MicVocal, Disc3, Radio, GripVertical, Loader2, Globe, Lock, MoreVertical,
 } from 'lucide-react';
 import { useTitle } from '@/lib/TitleContext';
 import toast from 'react-hot-toast';
@@ -58,11 +58,24 @@ export default function SetlistsPage() {
 
     const dragIndex = useRef<number | null>(null);
     const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleOutside);
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, []);
 
     const loadSetlists = async () => {
         const user = await getCurrentUser();
         setIsGuest(user?.provider === 'guest');
-        
+
         try {
             const [data, publicData] = await Promise.all([
                 user?.provider === 'guest' ? [] : getUserSetlists(),
@@ -254,21 +267,38 @@ export default function SetlistsPage() {
                                 </div>
                             </div>
                             {!isPublicSection && (
-                                <div className="absolute top-2 right-2 flex gap-1">
+                                <div className="absolute top-2 right-2" ref={openMenuId === list.id ? menuRef : null}>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); handleEdit(list); }}
-                                        className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition opacity-0 group-hover:opacity-100"
-                                        title="Editar"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenMenuId(openMenuId === list.id ? null : list.id);
+                                        }}
+                                        className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-700/80 text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 shadow-sm transition"
+                                        title="Opciones"
+                                        aria-label="Opciones"
                                     >
-                                        <Edit className="w-4 h-4" />
+                                        <MoreVertical className="w-4 h-4" />
                                     </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(list.id); }}
-                                        className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition opacity-0 group-hover:opacity-100"
-                                        title="Eliminar"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+
+                                    {openMenuId === list.id && (
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="absolute right-0 top-8 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden z-50"
+                                        >
+                                            <button
+                                                onClick={() => { setOpenMenuId(null); handleEdit(list); }}
+                                                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                                            >
+                                                <Edit className="w-4 h-4 text-sky-500" /> Editar
+                                            </button>
+                                            <button
+                                                onClick={() => { setOpenMenuId(null); handleDelete(list.id); }}
+                                                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                            >
+                                                <Trash2 className="w-4 h-4" /> Eliminar
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -343,11 +373,10 @@ export default function SetlistsPage() {
 
                             {/* visibilidad */}
                             <div
-                                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                                    editIsPublic
+                                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${editIsPublic
                                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                         : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30'
-                                }`}
+                                    }`}
                                 onClick={() => setEditIsPublic(p => !p)}
                             >
                                 <div className={`p-2 rounded-lg flex-shrink-0 ${editIsPublic ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'}`}>
@@ -386,11 +415,10 @@ export default function SetlistsPage() {
                                                 onDragStart={e => handleDragStart(e, index)}
                                                 onDragOver={e => handleDragOver(e, index)}
                                                 onDragEnd={handleDragEnd}
-                                                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all select-none ${
-                                                    draggingIdx === index
+                                                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all select-none ${draggingIdx === index
                                                         ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.01]'
                                                         : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0">
                                                     <GripVertical className="w-4 h-4" />

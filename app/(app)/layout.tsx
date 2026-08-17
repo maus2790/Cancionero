@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePathname } from 'next/navigation';
+import { ThemeColorUpdater } from '@/components/ThemeColorUpdater';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <TitleProvider>
+      <ThemeColorUpdater />
       <div className="h-[100dvh] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
         <Header onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
         <div className="flex flex-1 overflow-hidden relative">
