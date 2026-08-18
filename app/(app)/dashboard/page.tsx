@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import { InstallAppButton } from '@/components/InstallAppButton';
 import { canCreateContent } from '@/lib/permissions';
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 
 // Componente para tarjeta de estadística
 function StatCard({
@@ -33,13 +34,13 @@ function StatCard({
     color: string;
 }) {
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-4">
+        <div className="app-card p-4 flex items-center gap-4">
             <div className={`p-3 rounded-full ${color}`}>
                 <Icon className="w-6 h-6 text-white" />
             </div>
             <div>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white">{value}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+                <p className="text-2xl font-bold text-app">{value}</p>
+                <p className="text-sm text-app-muted">{label}</p>
             </div>
         </div>
     );
@@ -62,20 +63,18 @@ function QuickAccessCard({
     return (
         <Link
             href={href}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition p-4 border border-gray-200 dark:border-gray-700 group"
+            className="app-card p-4 flex items-start justify-between hover:app-glow-primary transition group"
         >
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${color}`}>
-                        <Icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-800 dark:text-white">{title}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
-                    </div>
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${color}`}>
+                    <Icon className="w-5 h-5 text-white" />
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition" />
+                <div>
+                    <h3 className="font-semibold text-app">{title}</h3>
+                    <p className="text-sm text-app-muted">{description}</p>
+                </div>
             </div>
+            <ArrowRight className="w-5 h-5 text-app-muted group-hover:text-[var(--color-primary)] transition" />
         </Link>
     );
 }
@@ -93,6 +92,7 @@ export default function HomePage() {
     });
     const [recentSetlists, setRecentSetlists] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const { isOnline } = useNetworkStatus();
 
     useEffect(() => {
         setTitle('Tu Cancionero');
@@ -101,6 +101,29 @@ export default function HomePage() {
 
     useEffect(() => {
         const loadData = async () => {
+            if (!isOnline) {
+                try {
+                    const { getOfflineConfig, getOfflineSetlists } = await import('@/lib/offline-db');
+                    const [config, setlistsOffline] = await Promise.all([
+                        getOfflineConfig(),
+                        getOfflineSetlists()
+                    ]);
+                    setUser({ name: 'Modo Offline' });
+                    setRecentSetlists(setlistsOffline.slice(0, 3));
+                    setStats({
+                        songs: config.songCount,
+                        chords: config.chordCount,
+                        setlists: config.setlistCount,
+                        favorites: config.favoriteCount,
+                    });
+                } catch (error) {
+                    console.error('Error loading offline dashboard data:', error);
+                } finally {
+                    setLoading(false);
+                }
+                return;
+            }
+
             try {
                 const [userData, setlistsData, songStats, chordsTotal] = await Promise.all([
                     getCurrentUser(),
@@ -124,12 +147,12 @@ export default function HomePage() {
             }
         };
         loadData();
-    }, []);
+    }, [isOnline]);
 
     if (loading) {
         return (
             <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
             </div>
         );
     }
@@ -137,11 +160,11 @@ export default function HomePage() {
     return (
         <div className="space-y-6 max-w-6xl mx-auto px-4 py-6">
             {/* Saludo */}
-            <div className="bg-gradient-to-r from-sky-600 to-blue-700 dark:from-sky-800 dark:to-blue-900 rounded-2xl shadow-lg p-6 text-white">
+            <div className="bg-app-primary-gradient rounded-2xl shadow-lg p-6 text-white app-glow-primary">
                 <h2 className="text-2xl font-bold">
                     ¡Bienvenido{user?.name ? `, ${user.name}` : ''}! 👋
                 </h2>
-                <p className="text-blue-100 mt-1">
+                <p className="text-white/80 mt-1">
                     Organiza tus canciones, acordes y listas desde un solo lugar.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -193,7 +216,7 @@ export default function HomePage() {
 
             {/* Accesos rápidos */}
             <div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+                <h3 className="text-lg font-semibold text-app mb-3">
                     Accesos rápidos
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -232,12 +255,12 @@ export default function HomePage() {
             {recentSetlists.length > 0 && (
                 <div>
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                        <h3 className="text-lg font-semibold text-app">
                             Setlists recientes
                         </h3>
                         <Link
                             href="/setlists"
-                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-sm text-[var(--color-primary)] hover:underline"
                         >
                             Ver todos
                         </Link>
@@ -247,17 +270,17 @@ export default function HomePage() {
                             <Link
                                 key={setlist.id}
                                 href={`/setlists/${setlist.id}`}
-                                className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition p-4 border border-gray-200 dark:border-gray-700"
+                                className="app-card p-4 hover:app-glow-primary transition block"
                             >
-                                <h4 className="font-semibold text-gray-800 dark:text-white">
+                                <h4 className="font-semibold text-app">
                                     {setlist.name}
                                 </h4>
                                 {setlist.description && (
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                    <p className="text-sm text-app-muted mt-1 line-clamp-2">
                                         {setlist.description}
                                     </p>
                                 )}
-                                <p className="text-xs text-gray-400 mt-2">
+                                <p className="text-xs text-app-muted mt-2">
                                     {setlist.songCount || 0} canciones
                                 </p>
                             </Link>
@@ -266,14 +289,14 @@ export default function HomePage() {
                 </div>
             )}
 
-            {/* Modo oscuro info */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+            {/* Tema actual */}
+            <div className="app-card p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <p className="text-sm text-app">
                             Tema actual: {theme === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-app-muted mt-1">
                             Puedes cambiar el tema desde el menú de usuario
                         </p>
                     </div>

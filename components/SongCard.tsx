@@ -22,14 +22,14 @@ interface SongCardProps {
 
 export function SongCard({ song, playingId, onPlayPause, isFavorite, onToggleFavorite, onAddToList }: SongCardProps) {
     return (
-        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition border p-4 ${!song.isPublic ? 'border-yellow-400 dark:border-yellow-600 ring-1 ring-yellow-200 dark:ring-yellow-900/50' : 'border-gray-200 dark:border-gray-700'}`}>
+        <div className={`app-card p-4 hover:shadow-lg transition ${!song.isPublic ? 'border-yellow-400 dark:border-yellow-600 ring-1 ring-yellow-200 dark:ring-yellow-900/50' : ''}`}>
             <div className="flex items-start justify-between gap-3">
                 <Link href={`/canciones/${song.id}`} className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base sm:text-lg text-gray-800 dark:text-white truncate">
+                    <h3 className="font-semibold text-base sm:text-lg text-app truncate">
                         {song.title}
                     </h3>
                     {song.artist && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-sm text-app-muted truncate">
                             {song.artist}
                         </p>
                     )}
@@ -56,31 +56,31 @@ export function SongCard({ song, playingId, onPlayPause, isFavorite, onToggleFav
                     {song.audioUrl && (
                         <button
                             onClick={() => onPlayPause(song)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                            className="p-1.5 rounded-lg hover:bg-[var(--color-border)] transition"
                             title={playingId === song.id ? 'Pausar' : 'Reproducir'}
                         >
                             {playingId === song.id ? (
-                                <Pause className="w-5 h-5 text-blue-500" />
+                                <Pause className="w-5 h-5 text-[var(--color-primary)]" />
                             ) : (
-                                <Play className="w-5 h-5 text-gray-400 hover:text-blue-500 transition" />
+                                <Play className="w-5 h-5 text-app-muted hover:text-[var(--color-primary)] transition" />
                             )}
                         </button>
                     )}
                     {onToggleFavorite && (
                         <button
                             onClick={() => onToggleFavorite(song.id)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                            className="p-1.5 rounded-lg hover:bg-[var(--color-border)] transition"
                             title={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                         >
-                            <Heart className={`w-5 h-5 transition ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-500'}`} />
+                            <Heart className={`w-5 h-5 transition ${isFavorite ? 'fill-red-500 text-red-500' : 'text-app-muted hover:text-red-500'}`} />
                         </button>
                     )}
                     <button
                         onClick={() => onAddToList(song.id, song.title)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        className="p-1.5 rounded-lg hover:bg-[var(--color-border)] transition"
                         title="Agregar a lista"
                     >
-                        <ListPlus className="w-5 h-5 text-gray-400 hover:text-blue-500 transition" />
+                        <ListPlus className="w-5 h-5 text-app-muted hover:text-[var(--color-primary)] transition" />
                     </button>
                 </div>
             </div>

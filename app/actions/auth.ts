@@ -142,32 +142,44 @@ export async function getCurrentUser() {
 
     if (!userId) return null;
 
-    const [user] = await db
-        .select({
-            id: users.id,
-            email: users.email,
-            name: users.name,
-            role: users.role,
-            provider: users.provider,
-            avatarUrl: users.avatarUrl,
-            createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.id, parseInt(userId)));
+    try {
+        const [user] = await db
+            .select({
+                id: users.id,
+                email: users.email,
+                name: users.name,
+                role: users.role,
+                provider: users.provider,
+                avatarUrl: users.avatarUrl,
+                createdAt: users.createdAt,
+            })
+            .from(users)
+            .where(eq(users.id, parseInt(userId)));
 
-    if (!user) return null;
+        if (!user) return null;
 
-    return {
-        id: user.id,
-        email: user.email,
-        name: userName || user.name,
-        role: user.role || 'user',
-        provider: user.provider,
-        avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt,
-    };
+        return {
+            id: user.id,
+            email: user.email,
+            name: userName || user.name,
+            role: user.role || 'user',
+            provider: user.provider,
+            avatarUrl: user.avatarUrl,
+            createdAt: user.createdAt,
+        };
+    } catch (error) {
+        console.warn('⚠️ [Offline Fallback] No se pudo conectar a la DB en getCurrentUser:', error);
+        return {
+            id: parseInt(userId),
+            email: 'offline@cancionero',
+            name: userName || 'Usuario Offline',
+            role: 'user',
+            provider: 'credentials',
+            avatarUrl: null,
+            createdAt: new Date(),
+        };
+    }
 }
-
 
 // ============================================================
 // CERRAR SESIÓN

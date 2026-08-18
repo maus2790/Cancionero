@@ -2,6 +2,9 @@
 
 @import "tailwindcss";
 
+/* Configurar variante dark para usar la clase .dark en lugar de media query */
+@variant dark (&:where(.dark, .dark *));
+
 /* =========================================================
    VARIABLES DE LA APLICACIÓN
    ========================================================= */

@@ -28,7 +28,7 @@ export default function FavoritesPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
   useAudioCleanup(audioRef);
-  
+
   const { isOnline } = useNetworkStatus();
   const { isSectionOffline } = useOfflineMode();
 
@@ -40,31 +40,35 @@ export default function FavoritesPage() {
 
   const loadData = async () => {
     setLoading(true);
-    
-    if (!isOnline && isSectionOffline('favorites')) {
-        setIsAuthenticated(true);
-        const [favs, lists] = await Promise.all([
+
+    if (!isOnline) {
+      setIsAuthenticated(true);
+      try {
+          const { getOfflineFavorites, getOfflineSetlists } = await import('@/lib/offline-db');
+          const [favs, lists] = await Promise.all([
             getOfflineFavorites(),
             getOfflineSetlists().catch(() => [])
-        ]);
-        setFavorites(favs);
-        setUserSetlists(lists);
-        setLoading(false);
-        return;
+          ]);
+          setFavorites(favs);
+          setUserSetlists(lists);
+      } catch (e) {}
+      setLoading(false);
+      return;
     }
 
-    // Verificar autenticación
-    const user = await getCurrentUser();
-    setIsAuthenticated(!!user);
+    try {
+        const user = await getCurrentUser();
+        setIsAuthenticated(!!user);
 
-    if (user) {
-      const [favs, lists] = await Promise.all([
-        getFavoriteSongs(),
-        getUserSetlists().catch(() => [])
-      ]);
-      setFavorites(favs);
-      setUserSetlists(lists);
-    }
+        if (user) {
+          const [favs, lists] = await Promise.all([
+            getFavoriteSongs(),
+            getUserSetlists().catch(() => [])
+          ]);
+          setFavorites(favs);
+          setUserSetlists(lists);
+        }
+    } catch (e) {}
     setLoading(false);
   };
 
@@ -109,28 +113,30 @@ export default function FavoritesPage() {
     audio.onended = () => setPlayingId(null);
   };
 
-  if (!isAuthenticated) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <Heart className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Inicia sesión</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">
-          Debes iniciar sesión para ver tus canciones favoritas.
-        </p>
-        <button
-          onClick={() => router.push('/login')}
-          className="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-        >
-          Ir a login
-        </button>
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
       </div>
     );
   }
 
-  if (loading) {
+  if (!isAuthenticated) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="app-card p-10 flex flex-col items-center gap-4 max-w-sm w-full">
+          <Heart className="w-16 h-16 text-app-muted" />
+          <h2 className="text-2xl font-bold text-app">Inicia sesión</h2>
+          <p className="text-app-muted">
+            Debes iniciar sesión para ver tus canciones favoritas.
+          </p>
+          <button
+            onClick={() => router.push('/login')}
+            className="app-button mt-2 px-6 py-2 rounded-lg w-full"
+          >
+            Ir a login
+          </button>
+        </div>
       </div>
     );
   }
@@ -138,17 +144,19 @@ export default function FavoritesPage() {
   if (favorites.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <Heart className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Sin favoritos</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">
-          No tienes canciones favoritas aún.
-        </p>
-        <button
-          onClick={() => router.push('/canciones')}
-          className="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-        >
-          Explorar canciones
-        </button>
+        <div className="app-card p-10 flex flex-col items-center gap-4 max-w-sm w-full">
+          <Heart className="w-16 h-16 text-app-muted" />
+          <h2 className="text-2xl font-bold text-app">Sin favoritos</h2>
+          <p className="text-app-muted">
+            No tienes canciones favoritas aún.
+          </p>
+          <button
+            onClick={() => router.push('/canciones')}
+            className="app-button mt-2 px-6 py-2 rounded-lg w-full"
+          >
+            Explorar canciones
+          </button>
+        </div>
       </div>
     );
   }
@@ -156,7 +164,7 @@ export default function FavoritesPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+        <h2 className="text-2xl font-bold text-app">
           Favoritos ({favorites.length})
         </h2>
       </div>
@@ -175,7 +183,6 @@ export default function FavoritesPage() {
         ))}
       </div>
 
-      {/* Modal para agregar a setlist */}
       {selectedSongId && (
         <AddToSetlistModal
           isOpen={showAddModal}
@@ -187,7 +194,6 @@ export default function FavoritesPage() {
           currentFontSize="medium"
           onSuccess={() => {
             setShowAddModal(false);
-            // Recargar favoritos para actualizar si cambió algo
             loadData();
           }}
         />

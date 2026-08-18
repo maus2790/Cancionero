@@ -17,7 +17,7 @@ import { canCreateContent, canManageContent, type ContentUser } from '@/lib/perm
 import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
 import { getOfflineSongById, getOfflineSetlists } from '@/lib/offline-db';
-// Opciones de tamaño de fuente
+
 const FONT_SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
 type FontSize = typeof FONT_SIZES[number];
 
@@ -42,14 +42,12 @@ export default function SongDetailPage() {
     const [song, setSong] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-
     const [transpose, setTranspose] = useState(0);
     const [fontSizeIndex, setFontSizeIndex] = useState(1);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [currentUser, setCurrentUser] = useState<ContentUser | null>(null);
 
-    // Estado del modal de acordes
     const [selectedChord, setSelectedChord] = useState<any>(null);
     const [selectedChordName, setSelectedChordName] = useState<string>('');
     const [isChordModalOpen, setIsChordModalOpen] = useState(false);
@@ -83,7 +81,7 @@ export default function SongDetailPage() {
         const loadData = async () => {
             setLoading(true);
 
-            if (!isOnline && isSectionOffline('songs')) {
+            if (!isOnline) {
                 const songData = await getOfflineSongById(Number(id));
                 setSong(songData);
                 try {
@@ -174,12 +172,12 @@ export default function SongDetailPage() {
             setHeaderRight(
                 <button
                     onClick={handleHeaderPlayer}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center justify-center"
+                    className="p-2 text-app-muted hover:text-[var(--color-primary)] transition flex items-center justify-center"
                     aria-label={isPlayerOpen ? 'Detener reproducción' : 'Reproducir'}
                     disabled={isBuffering}
                 >
                     {isBuffering ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
+                        <Loader2 className="w-5 h-5 animate-spin text-[var(--color-primary)]" />
                     ) : isPlayerOpen ? (
                         <Square className="w-5 h-5" />
                     ) : (
@@ -312,7 +310,7 @@ export default function SongDetailPage() {
     const handleChordClick = async (fullChord: string) => {
         const baseChord = fullChord.split('/')[0];
         setSelectedChordName(baseChord);
-        setSelectedChord(null); // Clear previous
+        setSelectedChord(null);
         setIsChordModalOpen(true);
         try {
             const chordData = await getChordByNameExact(baseChord);
@@ -338,14 +336,14 @@ export default function SongDetailPage() {
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
             </div>
         );
     }
 
     if (!song) {
         return (
-            <div className="flex justify-center items-center h-screen text-gray-500">
+            <div className="flex justify-center items-center h-screen text-app-muted">
                 Canción no encontrada
             </div>
         );
@@ -356,7 +354,7 @@ export default function SongDetailPage() {
     const canManageSong = canManageContent(currentUser, song.userId, song.isPublic ?? false);
 
     return (
-        <div ref={containerRef} className="bg-gray-50 dark:bg-gray-900">
+        <div ref={containerRef} className="bg-app">
 
             {song.audioUrl && (
                 <audio
@@ -374,10 +372,11 @@ export default function SongDetailPage() {
                 />
             )}
 
+            {/* Reproductor sticky */}
             {song.audioUrl && isPlayerOpen && (
-                <div className="sticky top-0 z-40 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 flex flex-row items-center gap-2 sm:gap-4 shadow-sm">
+                <div className="sticky top-0 z-40 app-glass border-b px-2 sm:px-4 py-2 sm:py-3 flex flex-row items-center gap-2 sm:gap-4 shadow-sm">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-[10px] sm:text-xs text-gray-500 font-mono w-8 sm:w-10 text-right shrink-0">
+                        <span className="text-[10px] sm:text-xs text-app-muted font-mono w-8 sm:w-10 text-right shrink-0">
                             {Math.floor(currentTime / 60)}:{(Math.floor(currentTime % 60)).toString().padStart(2, '0')}
                         </span>
                         <input
@@ -386,22 +385,22 @@ export default function SongDetailPage() {
                             max={duration || 100}
                             value={currentTime}
                             onChange={handleSeek}
-                            className="flex-1 min-w-0 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+                            className="flex-1 min-w-0 h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
                         />
-                        <span className="text-[10px] sm:text-xs text-gray-500 font-mono w-8 sm:w-10 shrink-0">
+                        <span className="text-[10px] sm:text-xs text-app-muted font-mono w-8 sm:w-10 shrink-0">
                             {Math.floor(duration / 60)}:{(Math.floor(duration % 60)).toString().padStart(2, '0')}
                         </span>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         <button
                             onClick={handleBarPlayPause}
-                            className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                            className="p-2 rounded-md bg-[var(--color-border)] text-app hover:opacity-80 transition"
                             aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
                             title={isPlaying ? 'Pausar' : 'Reproducir'}
                             disabled={isBuffering}
                         >
                             {isBuffering ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+                                <Loader2 className="w-4 h-4 animate-spin text-[var(--color-primary)]" />
                             ) : isPlaying ? (
                                 <Pause className="w-4 h-4" />
                             ) : (
@@ -410,7 +409,7 @@ export default function SongDetailPage() {
                         </button>
                         <button
                             onClick={togglePlaybackRate}
-                            className={`p-2 rounded-md transition ${playbackRate === 0.5 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                            className={`p-2 rounded-md transition ${playbackRate === 0.5 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-border)] text-app hover:opacity-80'}`}
                             aria-label={playbackRate === 1 ? 'Cambiar velocidad a 0.5' : 'Cambiar velocidad a 1'}
                             title={playbackRate === 1 ? 'Velocidad 0.5' : 'Velocidad 1'}
                         >
@@ -420,17 +419,20 @@ export default function SongDetailPage() {
                 </div>
             )}
 
+            {/* Banner edición de posición de notas */}
             {isEditingChordPositions && (
                 <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-blue-200 bg-blue-50 px-4 py-3 text-sm dark:border-blue-900 dark:bg-blue-950/50">
                     <span className="font-medium text-blue-800 dark:text-blue-200">Arrastra las notas con el cursor de mano y guarda los cambios.</span>
                     <div className="flex gap-2">
-                        <button onClick={() => setIsEditingChordPositions(false)} disabled={savingChordPositions} className="rounded-lg px-3 py-1.5 text-gray-700 hover:bg-blue-100 dark:text-gray-200">Cancelar</button>
-                        <button onClick={saveChordPositionChanges} disabled={savingChordPositions} className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50">{savingChordPositions ? 'Guardando...' : 'Guardar posiciones'}</button>
+                        <button onClick={() => setIsEditingChordPositions(false)} disabled={savingChordPositions} className="rounded-lg px-3 py-1.5 text-app hover:bg-[var(--color-border)]">Cancelar</button>
+                        <button onClick={saveChordPositionChanges} disabled={savingChordPositions} className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 font-medium text-white hover:opacity-90 disabled:opacity-50">{savingChordPositions ? 'Guardando...' : 'Guardar posiciones'}</button>
                     </div>
                 </div>
             )}
+
+            {/* Contenido de la canción */}
             <div className="min-h-screen overflow-x-auto p-4 sm:p-8">
-                <div className={`mx-auto min-w-max max-w-none whitespace-pre ${fontSizeClass} text-gray-800 dark:text-gray-200 leading-relaxed pb-32`}>
+                <div className={`mx-auto min-w-max max-w-none whitespace-pre ${fontSizeClass} text-app leading-relaxed pb-32`}>
                     {transposedContent.split('\n').map((line: string, i: number) => {
                         const parts = line.split(/(\[[^\]]+\])/g);
                         return (
@@ -453,7 +455,7 @@ export default function SongDetailPage() {
                                                     setChordOffsets(current => ({ ...current, [chordKey]: Math.round(dragStart.offset + event.clientX - dragStart.clientX) }));
                                                 }}
                                                 onPointerUp={() => setDragStart(null)}
-                                                className={`inline-block text-left text-blue-600 dark:text-blue-400 font-bold focus:outline-none ${isEditingChordPositions ? 'cursor-grab active:cursor-grabbing rounded bg-blue-100/70 px-0.5 dark:bg-blue-900/40' : 'cursor-pointer hover:underline'}`}
+                                                className={`inline-block text-left text-[var(--color-primary)] font-bold focus:outline-none ${isEditingChordPositions ? 'cursor-grab active:cursor-grabbing rounded bg-[var(--color-primary)]/10 px-0.5' : 'cursor-pointer hover:underline'}`}
                                                 style={{ transform: `translateX(${chordOffsets[chordKey] || 0}px)` }}
                                             >
                                                 {fullChord}
@@ -479,10 +481,10 @@ export default function SongDetailPage() {
                     className="flex flex-col items-center gap-0.5 group"
                     aria-label="Pantalla completa"
                 >
-                    <div className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 transition">
+                    <div className="p-1.5 rounded-full app-glass shadow-lg text-app-muted hover:text-[var(--color-primary)] transition">
                         {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                     </div>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[9px] text-app-muted">
                         {isFullscreen ? 'Salir' : 'Pantalla'}
                     </span>
                 </button>
@@ -492,11 +494,10 @@ export default function SongDetailPage() {
                     className="flex flex-col items-center gap-0.5 group"
                     aria-label="Favorito"
                 >
-                    <div className={`p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm transition ${isFavorite ? 'text-red-500' : 'text-gray-600 dark:text-gray-300 hover:text-red-500'
-                        }`}>
+                    <div className={`p-1.5 rounded-full app-glass shadow-lg transition ${isFavorite ? 'text-red-500' : 'text-app-muted hover:text-red-500'}`}>
                         <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500' : ''}`} />
                     </div>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[9px] text-app-muted">
                         {isFavorite ? 'Favorita' : 'Me gusta'}
                     </span>
                 </button>
@@ -507,40 +508,40 @@ export default function SongDetailPage() {
                         className="flex flex-col items-center gap-0.5 group"
                         aria-label="Agregar a lista"
                     >
-                        <div className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-green-500 transition">
+                        <div className="p-1.5 rounded-full app-glass shadow-lg text-app-muted hover:text-green-500 transition">
                             <ListPlus className="w-4 h-4" />
                         </div>
-                        <span className="text-[9px] text-gray-500 dark:text-gray-400">Lista</span>
+                        <span className="text-[9px] text-app-muted">Lista</span>
                     </button>
                 )}
 
                 <div className="flex flex-col items-center gap-0.5">
                     <button
                         onClick={() => handleTranspose(-1)}
-                        className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        className="p-1.5 rounded-full app-glass shadow-lg text-app-muted hover:text-[var(--color-primary)] transition"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="text-[9px] font-mono font-bold text-gray-700 dark:text-gray-300 min-w-[16px] text-center">
+                    <span className="text-[9px] font-mono font-bold text-app min-w-[16px] text-center">
                         {transpose === 0 ? '0' : `${transpose > 0 ? '+' : ''}${transpose}`}
                     </span>
                     <button
                         onClick={() => handleTranspose(1)}
-                        className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        className="p-1.5 rounded-full app-glass shadow-lg text-app-muted hover:text-[var(--color-primary)] transition"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
-                    <span className="text-[9px] text-gray-400">Tono</span>
+                    <span className="text-[9px] text-app-muted">Tono</span>
                 </div>
 
                 <button
                     onClick={handleFontSizeCycle}
                     className="flex flex-col items-center gap-0.5 group"
                 >
-                    <div className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 transition">
+                    <div className="p-1.5 rounded-full app-glass shadow-lg text-app-muted hover:text-[var(--color-primary)] transition">
                         <Type className="w-4 h-4" />
                     </div>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[9px] text-app-muted">
                         {FONT_SIZE_LABELS[fontSize]}
                     </span>
                 </button>
@@ -548,23 +549,23 @@ export default function SongDetailPage() {
                 <div className="relative flex flex-col items-center gap-0.5">
                     <button
                         onClick={() => setShowSongMenu(prev => !prev)}
-                        className="p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 transition"
+                        className="p-1.5 rounded-full app-glass shadow-lg text-app-muted hover:text-[var(--color-primary)] transition"
                         aria-label="Más acciones"
                         aria-expanded={showSongMenu}
                     >
                         <MoreHorizontal className="w-5 h-5" />
                     </button>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">Más</span>
+                    <span className="text-[9px] text-app-muted">Más</span>
 
                     {showSongMenu && (
-                        <div className="absolute right-10 bottom-0 w-52 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
+                        <div className="absolute right-10 bottom-0 w-52 overflow-hidden rounded-lg app-card shadow-xl">
                             {canCreateContent(currentUser) && (
                                 <button
                                     onClick={() => {
                                         setShowSongMenu(false);
                                         setIsEditingChordPositions(true);
                                     }}
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-app hover:bg-[var(--color-border)] transition"
                                 >
                                     Editar posición de notas
                                 </button>
@@ -575,30 +576,30 @@ export default function SongDetailPage() {
                                         setShowSongMenu(false);
                                         window.open(song.videoUrl, '_blank');
                                     }}
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[var(--color-border)] transition"
                                 >
                                     <Video className="w-4 h-4" /> Ver video
                                 </button>
                             )}
                             {canManageSong && <>
-                            <button
-                                onClick={() => {
-                                    setShowSongMenu(false);
-                                    router.push(`/canciones/${song.id}/editar`);
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            >
-                                <Edit className="w-4 h-4" /> Editar canción
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowSongMenu(false);
-                                    handleDelete();
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            >
-                                <Trash2 className="w-4 h-4" /> Eliminar canción
-                            </button>
+                                <button
+                                    onClick={() => {
+                                        setShowSongMenu(false);
+                                        router.push(`/canciones/${song.id}/editar`);
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-app hover:bg-[var(--color-border)] transition"
+                                >
+                                    <Edit className="w-4 h-4" /> Editar canción
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowSongMenu(false);
+                                        handleDelete();
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-[var(--color-border)] transition"
+                                >
+                                    <Trash2 className="w-4 h-4" /> Eliminar canción
+                                </button>
                             </>}
                         </div>
                     )}

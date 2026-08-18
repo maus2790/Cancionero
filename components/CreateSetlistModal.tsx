@@ -48,7 +48,7 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
         setError('');
         try {
             const newSetlist = await createSetlist({ name: name.trim(), description: description.trim() || undefined, isPublic });
-            
+
             for (let i = 0; i < selectedSongs.length; i++) {
                 await addSongToSetlist({ setlistId: newSetlist.id, songId: selectedSongs[i].id });
             }
@@ -104,12 +104,12 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div className="app-card rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
                 {/* header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Nueva lista</h2>
-                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                        <X className="w-5 h-5 text-gray-500" />
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)] flex-shrink-0">
+                    <h2 className="text-xl font-bold text-app">Nueva lista</h2>
+                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-border)] transition">
+                        <X className="w-5 h-5 text-app-muted" />
                     </button>
                 </div>
 
@@ -122,14 +122,14 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
 
                     {/* nombre */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-app mb-1">
                             Nombre de la lista *
                         </label>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            className="app-input w-full px-3 py-2 rounded-lg"
                             placeholder="Ej: Culto de adoración"
                             required
                         />
@@ -137,35 +137,34 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
 
                     {/* descripción */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-app mb-1">
                             Descripción (opcional)
                         </label>
                         <input
                             type="text"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            className="app-input w-full px-3 py-2 rounded-lg"
                             placeholder="Descripción de la lista"
                         />
                     </div>
 
                     {/* visibilidad */}
                     <div
-                        className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                            isPublic
-                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30'
-                        }`}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${isPublic
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                            : 'border-[var(--color-border)] bg-[var(--color-border)]/30'
+                            }`}
                         onClick={() => setIsPublic(p => !p)}
                     >
-                        <div className={`p-2 rounded-lg flex-shrink-0 ${isPublic ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'}`}>
+                        <div className={`p-2 rounded-lg flex-shrink-0 ${isPublic ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-border)] text-app-muted'}`}>
                             {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-gray-800 dark:text-white">
+                            <p className="text-sm font-semibold text-app">
                                 {isPublic ? 'Lista pública' : 'Lista privada'}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-app-muted">
                                 {isPublic ? 'Visible para todos los usuarios' : 'Solo visible para ti'}
                             </p>
                         </div>
@@ -173,10 +172,10 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
 
                     {/* canciones */}
                     <div>
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Canciones de la Setlist</h4>
+                        <h4 className="text-sm font-semibold text-app mb-2">Canciones de la Setlist</h4>
 
                         {selectedSongs.length === 0 ? (
-                            <div className="text-center py-6 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl text-gray-400 dark:text-gray-500 text-sm">
+                            <div className="text-center py-6 border-2 border-dashed border-[var(--color-border)] rounded-xl text-app-muted text-sm">
                                 <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                 Esta lista no tiene canciones aún
                             </div>
@@ -189,24 +188,23 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
                                         onDragStart={e => handleDragStart(e, index)}
                                         onDragOver={e => handleDragOver(e, index)}
                                         onDragEnd={handleDragEnd}
-                                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all select-none ${
-                                            draggingIdx === index
-                                                ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.01]'
-                                                : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                        }`}
+                                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all select-none ${draggingIdx === index
+                                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-md scale-[1.01]'
+                                            : 'border-[var(--color-border)] bg-[var(--color-border)]/20 hover:bg-[var(--color-border)]/40'
+                                            }`}
                                     >
-                                        <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0">
+                                        <div className="cursor-grab active:cursor-grabbing text-app-muted hover:text-app flex-shrink-0">
                                             <GripVertical className="w-4 h-4" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-800 dark:text-white truncate">
+                                            <p className="text-sm font-medium text-app truncate">
                                                 {song?.title ?? '—'}
                                             </p>
                                             {song?.artist && (
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{song.artist}</p>
+                                                <p className="text-xs text-app-muted truncate">{song.artist}</p>
                                             )}
                                         </div>
-                                        <span className="text-xs text-gray-400 dark:text-gray-500 font-mono flex-shrink-0 w-5 text-right">{index + 1}</span>
+                                        <span className="text-xs text-app-muted font-mono flex-shrink-0 w-5 text-right">{index + 1}</span>
                                         <button
                                             onClick={() => handleRemoveSong(index)}
                                             className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex-shrink-0"
@@ -220,11 +218,11 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
                         )}
 
                         <div className="mt-3">
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agregar canción</label>
+                            <label className="block text-xs font-medium text-app-muted mb-1">Agregar canción</label>
                             <select
                                 value=""
                                 onChange={e => handleAddSong(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="app-input w-full px-3 py-2 rounded-lg text-sm"
                             >
                                 <option value="">
                                     {availableSongs.length === 0 ? 'No hay canciones disponibles' : '+ Seleccionar una canción…'}
@@ -240,11 +238,11 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
                 </div>
 
                 {/* botones */}
-                <div className="flex gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <div className="flex gap-3 px-6 py-4 border-t border-[var(--color-border)] flex-shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium"
+                        className="flex-1 px-4 py-2 bg-[var(--color-border)] text-app rounded-lg hover:opacity-80 transition font-medium"
                     >
                         Cancelar
                     </button>
@@ -252,7 +250,7 @@ export function CreateSetlistModal({ isOpen, onClose, onSuccess }: CreateSetlist
                         type="button"
                         onClick={handleSubmit}
                         disabled={loading || !name.trim()}
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 app-button px-4 py-2 rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {loading ? (
                             <><Loader2 className="w-4 h-4 animate-spin" /> Creando...</>

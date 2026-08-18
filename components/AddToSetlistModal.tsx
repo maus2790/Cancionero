@@ -45,7 +45,6 @@ export function AddToSetlistModal({
         try {
             let setlistId = selectedSetlistId;
 
-            // Si está creando una nueva lista
             if (isCreatingNew) {
                 if (!newListName.trim()) {
                     setError('El nombre de la lista es obligatorio');
@@ -65,7 +64,6 @@ export function AddToSetlistModal({
                 return;
             }
 
-            // Agregar canción a la lista con la configuración actual
             await addSongToSetlist({
                 setlistId,
                 songId,
@@ -73,7 +71,6 @@ export function AddToSetlistModal({
                 fontSize: currentFontSize,
             });
 
-            // Éxito
             router.refresh();
             toast.success('Canción agregada a la lista');
             if (onSuccess) onSuccess();
@@ -87,24 +84,24 @@ export function AddToSetlistModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="app-card rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
+                    <h2 className="text-xl font-bold text-app">
                         Agregar a lista
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        className="p-1 rounded-lg hover:bg-[var(--color-border)] transition"
                     >
-                        <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                        <X className="w-6 h-6 text-app-muted" />
                     </button>
                 </div>
 
                 {/* Body */}
                 <form onSubmit={handleSubmit} className="p-4 space-y-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Agregando <span className="font-semibold">"{songTitle}"</span> a una lista
+                    <p className="text-sm text-app-muted">
+                        Agregando <span className="font-semibold text-app">"{songTitle}"</span> a una lista
                     </p>
 
                     {error && (
@@ -113,21 +110,20 @@ export function AddToSetlistModal({
                         </div>
                     )}
 
-                    {/* Selector de lista existente o nueva */}
+                    {/* Selector de lista */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-app mb-2">
                             Seleccionar lista
                         </label>
                         <div className="space-y-2">
-                            {/* Opción: lista existente */}
                             {existingSetlists.length > 0 && (
                                 <div className="space-y-2">
                                     {existingSetlists.map((list) => (
                                         <label
                                             key={list.id}
                                             className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${!isCreatingNew && selectedSetlistId === list.id
-                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                                                : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
                                                 }`}
                                         >
                                             <input
@@ -138,18 +134,18 @@ export function AddToSetlistModal({
                                                     setIsCreatingNew(false);
                                                     setSelectedSetlistId(list.id);
                                                 }}
-                                                className="w-4 h-4 text-blue-600"
+                                                className="w-4 h-4 text-[var(--color-primary)]"
                                             />
                                             <div className="flex-1">
-                                                <p className="font-medium text-gray-800 dark:text-white">
+                                                <p className="font-medium text-app">
                                                     {list.name}
                                                 </p>
                                                 {list.description && (
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    <p className="text-sm text-app-muted">
                                                         {list.description}
                                                     </p>
                                                 )}
-                                                <p className="text-xs text-gray-400">
+                                                <p className="text-xs text-app-muted">
                                                     {list.songCount || 0} canciones
                                                 </p>
                                             </div>
@@ -161,8 +157,8 @@ export function AddToSetlistModal({
                             {/* Opción: crear nueva */}
                             <label
                                 className={`flex items-center gap-3 p-3 rounded-lg border-2 border-dashed cursor-pointer transition ${isCreatingNew
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
                                     }`}
                             >
                                 <input
@@ -173,11 +169,11 @@ export function AddToSetlistModal({
                                         setIsCreatingNew(true);
                                         setSelectedSetlistId(null);
                                     }}
-                                    className="w-4 h-4 text-blue-600"
+                                    className="w-4 h-4 text-[var(--color-primary)]"
                                 />
                                 <div className="flex items-center gap-2">
-                                    <Plus className="w-4 h-4 text-blue-600" />
-                                    <span className="font-medium text-blue-600">Crear nueva lista</span>
+                                    <Plus className="w-4 h-4 text-[var(--color-primary)]" />
+                                    <span className="font-medium text-[var(--color-primary)]">Crear nueva lista</span>
                                 </div>
                             </label>
                         </div>
@@ -185,29 +181,29 @@ export function AddToSetlistModal({
 
                     {/* Campos para nueva lista */}
                     {isCreatingNew && (
-                        <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                        <div className="space-y-3 p-3 bg-[var(--color-border)]/20 rounded-lg">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-app mb-1">
                                     Nombre de la lista *
                                 </label>
                                 <input
                                     type="text"
                                     value={newListName}
                                     onChange={(e) => setNewListName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    className="app-input w-full px-3 py-2 rounded-lg"
                                     placeholder="Ej: Culto de adoración"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-app mb-1">
                                     Descripción (opcional)
                                 </label>
                                 <input
                                     type="text"
                                     value={newListDescription}
                                     onChange={(e) => setNewListDescription(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    className="app-input w-full px-3 py-2 rounded-lg"
                                     placeholder="Descripción de la lista"
                                 />
                             </div>
@@ -215,18 +211,18 @@ export function AddToSetlistModal({
                     )}
 
                     {/* Acciones */}
-                    <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex gap-3 pt-4 border-t border-[var(--color-border)]">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium"
+                            className="flex-1 px-4 py-2 bg-[var(--color-border)] text-app rounded-lg hover:opacity-80 transition font-medium"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="flex-1 app-button px-4 py-2 rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>

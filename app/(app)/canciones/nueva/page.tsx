@@ -41,7 +41,6 @@ export default function NewSongPage() {
         setOnBack(() => router.push('/canciones'));
     }, [setTitle, setOnBack, setShowBack, router]);
 
-    // Clean up the object URL when the component unmounts
     useEffect(() => {
         return () => {
             if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
@@ -66,18 +65,16 @@ export default function NewSongPage() {
         }
 
         const formData = new FormData(e.currentTarget);
-        
+
         try {
             if (audioFile) {
                 const ext = audioFile.name.split('.').pop() || 'mp3';
                 const { uploadUrl, publicUrl } = await getDirectUploadUrl('music', ext, audioFile.type);
-                
+
                 const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
                     body: audioFile,
-                    headers: {
-                        'Content-Type': audioFile.type,
-                    },
+                    headers: { 'Content-Type': audioFile.type },
                 });
 
                 if (!uploadResponse.ok) {
@@ -97,7 +94,7 @@ export default function NewSongPage() {
             }
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'Error al guardar la canción. Es posible que el archivo sea demasiado grande o haya un problema de conexión.');
+            setError(err.message || 'Error al guardar la canción.');
             setLoading(false);
         }
     }
@@ -141,34 +138,34 @@ export default function NewSongPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 pb-24 sm:pb-8">
             {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <form onSubmit={handleSubmit} className="space-y-5 app-card p-6">
                 {/* Título y Artista */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-app mb-1">
                             Título *
                         </label>
                         <input
                             type="text"
                             name="title"
                             required
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            className="app-input w-full px-4 py-2 rounded-lg"
                             placeholder="Nombre de la canción"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-app mb-1">
                             Artista
                         </label>
                         <input
                             type="text"
                             name="artist"
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            className="app-input w-full px-4 py-2 rounded-lg"
                             placeholder="Artista o banda"
                         />
                     </div>
@@ -177,34 +174,34 @@ export default function NewSongPage() {
                 {/* Tonalidad y Estilo */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-app mb-1">
                             Tonalidad
                         </label>
                         <select
                             name="key"
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            className="app-input w-full px-4 py-2 rounded-lg"
                         >
                             <option value="">Seleccionar</option>
                             {NOTES.map(note => (
                                 <option key={note} value={note}>{note}</option>
                             ))}
                         </select>
-                        <div className="mt-2 flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
+                        <div className="mt-2 flex items-center gap-4 text-sm text-app">
                             <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="radio" name="keyMode" value="major" defaultChecked className="text-blue-600" /> Mayor
+                                <input type="radio" name="keyMode" value="major" defaultChecked className="text-[var(--color-primary)]" /> Mayor
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="radio" name="keyMode" value="minor" className="text-blue-600" /> Menor
+                                <input type="radio" name="keyMode" value="minor" className="text-[var(--color-primary)]" /> Menor
                             </label>
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-app mb-1">
                             Estilo
                         </label>
                         <select
                             name="style"
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            className="app-input w-full px-4 py-2 rounded-lg"
                         >
                             {STYLE_OPTIONS.map(style => (
                                 <option key={style} value={style}>{style || 'Sin estilo'}</option>
@@ -215,13 +212,13 @@ export default function NewSongPage() {
 
                 {/* Audio */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-app mb-2">
                         <Music className="w-4 h-4" />
                         Archivo de Audio (Opcional)
                     </label>
 
                     {audioPreviewUrl ? (
-                        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center gap-3 p-3 bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/30 rounded-lg">
                             <audio src={audioPreviewUrl} controls className="flex-1 h-10" />
                             <button
                                 type="button"
@@ -239,20 +236,20 @@ export default function NewSongPage() {
                             name="audio"
                             accept="audio/*,.mpeg,.mp3,.wav,.ogg,.m4a"
                             onChange={handleAudioChange}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                            className="app-input w-full px-4 py-2 rounded-lg file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)]/10 file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary)]/20"
                         />
                     )}
                 </div>
 
                 {/* Video */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-app mb-1">
                         URL del Video (YouTube, etc.)
                     </label>
                     <input
                         type="url"
                         name="videoUrl"
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        className="app-input w-full px-4 py-2 rounded-lg"
                         placeholder="https://www.youtube.com/watch?v=..."
                     />
                 </div>
@@ -260,13 +257,13 @@ export default function NewSongPage() {
                 {/* Contenido */}
                 <div>
                     <div className="flex items-center justify-between mb-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label className="block text-sm font-medium text-app">
                             Contenido (formato ChordPro) *
                         </label>
                         <button
                             type="button"
                             onClick={handlePasteFromClipboard}
-                            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                            className="flex items-center gap-1 text-sm text-[var(--color-primary)] hover:opacity-80 transition"
                         >
                             {pasted ? (
                                 <>
@@ -288,15 +285,15 @@ export default function NewSongPage() {
                         rows={15}
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-mono text-sm focus:ring-2 focus:ring-blue-500"
+                        className="app-input w-full px-4 py-2 rounded-lg font-mono text-sm"
                         placeholder={EXAMPLE_CONTENT}
                     />
                 </div>
 
                 {/* Visibilidad */}
-                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">✓</span>
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
+                <div className="flex items-center gap-2 text-sm text-app">
+                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] text-white">✓</span>
+                    <label className="text-sm text-app">
                         Canción pública (visible para todos)
                     </label>
                 </div>
@@ -304,7 +301,7 @@ export default function NewSongPage() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
+                    className="app-button w-full py-2.5 px-4 rounded-lg"
                 >
                     {loading ? 'Guardando...' : 'Guardar Canción'}
                 </button>

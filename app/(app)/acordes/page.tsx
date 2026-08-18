@@ -35,13 +35,14 @@ export default function ChordsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingChord, setEditingChord] = useState<any>(null);
 
+
   const { isOnline } = useNetworkStatus();
   const { isSectionOffline } = useOfflineMode();
 
   const loadChords = async () => {
     setLoading(true);
     try {
-      if (!isOnline && isSectionOffline('chords')) {
+      if (!isOnline) {
         const offlineData = await getOfflineChords();
         setChordsList(offlineData);
       } else {
@@ -57,7 +58,11 @@ export default function ChordsPage() {
 
   useEffect(() => {
     loadChords();
-    getCurrentUser().then(setCurrentUser);
+    if (isOnline) {
+      getCurrentUser().then(setCurrentUser).catch(() => {});
+    } else {
+      setCurrentUser({ id: 0, email: '', name: 'Modo Offline', role: 'user', provider: 'guest' } as any);
+    }
   }, [isOnline]);
 
   const canCreate = canCreateContent(currentUser);
@@ -74,7 +79,6 @@ export default function ChordsPage() {
     return { roots: NOTE_OPTIONS.filter((option) => rootSet.has(option.value)), types: Array.from(typeSet).sort() };
   })();
 
-  // Filtros activos
   const hasFilters = selectedRoot || selectedType;
   const activeFilters = [];
   if (selectedRoot) activeFilters.push({ label: `Nota: ${NOTE_OPTIONS.find((option) => option.value === selectedRoot)?.label || selectedRoot}`, key: 'root', value: selectedRoot });
@@ -91,11 +95,11 @@ export default function ChordsPage() {
     try {
       const value = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
       hasGuitar = !!value && (value.barre !== null || (Array.isArray(value.fingers) && value.fingers.some((finger: number) => finger >= 0)));
-    } catch { /* posición inválida: no se muestra */ }
+    } catch { }
     try {
       const value = chord.pianoPositions ? JSON.parse(chord.pianoPositions) : null;
       hasPiano = Array.isArray(value) ? value.length > 0 : Array.isArray(value?.notes) && value.notes.length > 0;
-    } catch { /* posición inválida: no se muestra */ }
+    } catch { }
 
     let matchesView = true;
     if (view === 'guitar') matchesView = !!hasGuitar;
@@ -127,32 +131,35 @@ export default function ChordsPage() {
     <div className="max-w-6xl mx-auto px-4 py-4 pb-24 sm:pb-6">
 
       {/* Filtros */}
-      {/* Filtros */}
       <div className="flex flex-row justify-between items-center gap-3 mb-4 overflow-x-auto">
-        {/* Botones Guitarra / Teclado (izquierda) */}
-        <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex-shrink-0">
+        {/* Toggle Guitarra / Teclado */}
+        <div className="flex gap-1 bg-[var(--color-border)] p-1 rounded-lg flex-shrink-0">
           <button
             onClick={() => setView('guitar')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${view === 'guitar' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${view === 'guitar'
+              ? 'bg-[var(--color-primary)] text-white shadow-sm'
+              : 'text-app hover:text-[var(--color-primary)]'
               }`}
           >
             Guitarra
           </button>
           <button
             onClick={() => setView('piano')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${view === 'piano' ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300'
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${view === 'piano'
+              ? 'bg-[var(--color-primary)] text-white shadow-sm'
+              : 'text-app hover:text-[var(--color-primary)]'
               }`}
           >
             Teclado
           </button>
         </div>
 
-        {/* Selects (derecha) */}
+        {/* Selects */}
         <div className="flex flex-nowrap gap-2 flex-shrink-0">
           <select
             value={selectedRoot}
             onChange={e => setSelectedRoot(e.target.value)}
-            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs min-w-0 max-w-[100px]"
+            className="app-input px-2 py-1.5 rounded-lg text-xs min-w-0 max-w-[100px]"
           >
             <option value="">Notas</option>
             {roots.map(root => (
@@ -162,7 +169,7 @@ export default function ChordsPage() {
           <select
             value={selectedType}
             onChange={e => setSelectedType(e.target.value)}
-            className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-xs min-w-0 max-w-[100px]"
+            className="app-input px-2 py-1.5 rounded-lg text-xs min-w-0 max-w-[100px]"
           >
             <option value="">Tipos</option>
             {types.map(type => (
@@ -178,12 +185,12 @@ export default function ChordsPage() {
           {activeFilters.map(filter => (
             <span
               key={filter.key}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+              className="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full text-sm"
             >
               {filter.label}
               <button
                 onClick={() => clearFilter(filter.key as 'root' | 'type')}
-                className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+                className="hover:bg-[var(--color-primary)]/20 rounded-full p-0.5"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -192,7 +199,7 @@ export default function ChordsPage() {
           {activeFilters.length > 1 && (
             <button
               onClick={clearAllFilters}
-              className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+              className="text-xs text-app-muted hover:text-app hover:underline"
             >
               Limpiar todos
             </button>
@@ -203,14 +210,14 @@ export default function ChordsPage() {
       {/* Grid de acordes */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       ) : filteredChords.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 text-app-muted">
           No se encontraron acordes.
           {canCreate && <button
             onClick={() => { setEditingChord(null); setIsFormOpen(true); }}
-            className="block mx-auto mt-4 text-blue-600 hover:underline"
+            className="block mx-auto mt-4 text-[var(--color-primary)] hover:underline"
           >
             Crear el primer acorde
           </button>}
@@ -237,10 +244,10 @@ export default function ChordsPage() {
             return (
               <div
                 key={chord.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 flex flex-col items-center border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md transition"
+                className="app-card rounded-lg p-2 flex flex-col items-center cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition"
                 onClick={() => handleChordClick(chord)}
               >
-                <span className="text-lg font-bold text-gray-800 dark:text-white mb-2">
+                <span className="text-lg font-bold text-app mb-2">
                   {getChordDisplayName(chord.root, chord.type, chord.name)}
                 </span>
                 <div className="w-full flex justify-center pointer-events-none">
@@ -260,7 +267,7 @@ export default function ChordsPage() {
                   )}
                 </div>
                 {chord.isPredefined && (
-                  <span className="absolute top-1 left-1 text-[8px] text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1 rounded">
+                  <span className="absolute top-1 left-1 text-[8px] text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-1 rounded">
                     importado
                   </span>
                 )}
@@ -270,15 +277,15 @@ export default function ChordsPage() {
         </div>
       )}
 
-      {/* Botón flotante para nuevo acorde */}
+      {/* Botón flotante nuevo acorde */}
       {canCreate && <button
         onClick={() => { setEditingChord(null); setIsFormOpen(true); }}
-        className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
+        className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 app-button p-3 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
+        aria-label="Nuevo acorde"
       >
         <Plus className="w-6 h-6" />
       </button>}
 
-      {/* Modal */}
       <ChordModal
         chord={selectedChord}
         isOpen={isModalOpen}

@@ -35,15 +35,20 @@ export async function getAllSongsForOffline() {
     return items.map(song => ({ ...song, isFavorite: favoriteIds.has(song.id) }));
 }
 
-// OBTENER TODOS LOS SETLISTS Y SUS CANCIONES PARA OFFLINE
 export async function getAllSetlistsForOffline() {
     const user = await getCurrentUser();
-    if (!user) return [];
+
+    const conditions = [];
+    if (user) {
+        conditions.push(or(eq(setlists.userId, user.id), eq(setlists.isPublic, true)));
+    } else {
+        conditions.push(eq(setlists.isPublic, true));
+    }
 
     const userSetlists = await db
         .select()
         .from(setlists)
-        .where(eq(setlists.userId, user.id));
+        .where(conditions[0]);
 
     const result = [];
     for (const setlist of userSetlists) {
@@ -52,6 +57,8 @@ export async function getAllSetlistsForOffline() {
                 id: setlistSongs.id,
                 songId: setlistSongs.songId,
                 order: setlistSongs.order,
+                transposition: setlistSongs.transposition,
+                fontSize: setlistSongs.fontSize,
                 song: songs,
             })
             .from(setlistSongs)

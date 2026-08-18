@@ -10,12 +10,12 @@ import { getChordDisplayName } from '@/lib/constants';
 
 interface ChordModalProps {
     chord: any;
-    chordName?: string; // Para cuando no se encuentra el acorde
+    chordName?: string;
     isOpen: boolean;
     onClose: () => void;
-    onDelete?: () => void; // Hacemos opcional onDelete
+    onDelete?: () => void;
     initialView?: 'guitar' | 'piano';
-    allowToggle?: boolean; // Nuevo prop para permitir alternar entre instrumentos
+    allowToggle?: boolean;
     canCreate?: boolean;
     canManage?: boolean;
     onEdit?: () => void;
@@ -41,23 +41,23 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
     if (!chord) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 relative" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                        <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                <div className="app-card rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 relative" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={onClose} className="absolute top-3 right-3 p-1 rounded-full hover:bg-[var(--color-border)] transition">
+                        <X className="w-6 h-6 text-app-muted" />
                     </button>
-                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white text-center mb-2">
+                    <h2 className="text-3xl font-bold text-app text-center mb-2">
                         {chordName}
                     </h2>
-                    <p className="text-center text-gray-500 dark:text-gray-400 mb-6">
-                        El acorde <strong>{chordName}</strong> no existe en la base de datos.
+                    <p className="text-center text-app-muted mb-6">
+                        El acorde <strong className="text-app">{chordName}</strong> no existe en la base de datos.
                     </p>
                     {canCreate && <div className="flex justify-center">
                         <button
                             onClick={() => {
-                                router.push(`/acordes/nuevo?name=${encodeURIComponent(chordName || '')}`);
+                                if (onEdit) onEdit();
                                 onClose();
                             }}
-                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                            className="flex items-center gap-2 px-6 py-2 app-button rounded-lg font-medium"
                         >
                             <Plus className="w-5 h-5" /> Crear Acorde
                         </button>
@@ -71,7 +71,7 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
     try {
         positions = chord.guitarPositions ? JSON.parse(chord.guitarPositions) : null;
     } catch {}
-    
+
     let pianoData: { startingNote: string, notes: string[] } = { startingNote: 'C', notes: [] };
     try {
         if (chord.pianoPositions) {
@@ -106,26 +106,32 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-6 relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="app-card rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-6 relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <button
                     onClick={onClose}
-                    className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    className="absolute top-3 right-3 p-1 rounded-full hover:bg-[var(--color-border)] transition"
                 >
-                    <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                    <X className="w-6 h-6 text-app-muted" />
                 </button>
 
                 {allowToggle && (
                     <div className="flex justify-center mb-2">
-                        <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg inline-flex">
+                        <div className="bg-[var(--color-border)] p-1 rounded-lg inline-flex">
                             <button
                                 onClick={() => setViewMode('guitar')}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'guitar' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'guitar'
+                                    ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
+                                    : 'text-app-muted hover:text-app'
+                                    }`}
                             >
                                 Guitarra
                             </button>
                             <button
                                 onClick={() => setViewMode('piano')}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'piano' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'piano'
+                                    ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
+                                    : 'text-app-muted hover:text-app'
+                                    }`}
                             >
                                 Piano
                             </button>
@@ -133,7 +139,7 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                     </div>
                 )}
 
-                <h2 className="text-3xl font-bold text-gray-800 dark:text-white text-center mb-4 mt-2">
+                <h2 className="text-3xl font-bold text-app text-center mb-4 mt-2">
                     {getChordDisplayName(chord.root, chord.type, chord.name)}
                 </h2>
 
@@ -152,13 +158,13 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                 <div className="flex flex-wrap justify-center gap-3 mb-4">
                     {canManage && <button
                         onClick={handleEdit}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                        className="flex items-center gap-2 px-4 py-2 app-button rounded-lg"
                     >
                         <Edit className="w-4 h-4" /> Editar
                     </button>}
                     {canManage && <button
                         onClick={handleDelete}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
                     >
                         <Trash2 className="w-4 h-4" /> Eliminar
                     </button>}
@@ -167,14 +173,14 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                             setShowImage(!showImage);
                             setImageError(false);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--color-border)] text-app rounded-lg hover:opacity-80 transition"
                     >
                         <ImageIcon className="w-4 h-4" /> {showImage ? 'Ocultar imagen' : 'Ver imagen'}
                     </button>
                 </div>
 
                 {showImage && (
-                    <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
+                    <div className="mt-4 p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-border)]/10">
                         {imageUrl && !imageError ? (
                             <img
                                 src={imageUrl}
@@ -183,7 +189,7 @@ export default function ChordModal({ chord, chordName, isOpen, onClose, onDelete
                                 onError={() => setImageError(true)}
                             />
                         ) : (
-                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <div className="text-center py-8 text-app-muted">
                                 <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                                 <p>Imagen no disponible</p>
                                 <p className="text-xs mt-1">Sube una imagen desde la edición del acorde</p>

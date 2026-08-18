@@ -59,23 +59,23 @@ export function SetlistSongItem({
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
+        <div className="app-card rounded-lg p-4">
             <div className="flex items-center gap-4">
                 {/* Botones de reordenamiento */}
                 <div className="flex flex-col gap-0.5">
                     <button
                         onClick={handleMoveUp}
                         disabled={index === 0}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition disabled:opacity-30"
+                        className="p-1 hover:bg-[var(--color-border)] rounded transition disabled:opacity-30"
                     >
-                        <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <ChevronUp className="w-4 h-4 text-app-muted" />
                     </button>
                     <button
                         onClick={handleMoveDown}
                         disabled={index === total - 1}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition disabled:opacity-30"
+                        className="p-1 hover:bg-[var(--color-border)] rounded transition disabled:opacity-30"
                     >
-                        <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <ChevronDown className="w-4 h-4 text-app-muted" />
                     </button>
                 </div>
 
@@ -83,21 +83,21 @@ export function SetlistSongItem({
                 <div className="flex-1 min-w-0">
                     <Link
                         href={`/canciones/${song.songId}`}
-                        className="font-medium text-gray-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition"
+                        className="font-medium text-app hover:text-[var(--color-primary)] transition"
                     >
                         {song.title}
                     </Link>
                     {song.artist && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{song.artist}</p>
+                        <p className="text-sm text-app-muted">{song.artist}</p>
                     )}
                     <div className="flex items-center gap-3 mt-1 text-xs">
                         {song.transposition !== 0 && (
-                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
+                            <span className="px-2 py-0.5 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full">
                                 Tono: {song.transposition > 0 ? `+${song.transposition}` : song.transposition}
                             </span>
                         )}
                         {song.fontSize && song.fontSize !== 'medium' && (
-                            <span className="px-2 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">
+                            <span className="px-2 py-0.5 bg-[var(--color-border)] text-app-muted rounded-full">
                                 {song.fontSize}
                             </span>
                         )}
@@ -108,14 +108,14 @@ export function SetlistSongItem({
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setShowConfig(!showConfig)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                        className="p-2 hover:bg-[var(--color-border)] rounded-lg transition"
                         aria-label="Configurar canción"
                     >
-                        <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <Settings className="w-4 h-4 text-app-muted" />
                     </button>
                     <button
                         onClick={() => onRemove(song.id)}
-                        className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition"
+                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                         aria-label="Eliminar de lista"
                     >
                         <Trash2 className="w-4 h-4 text-red-500" />
@@ -125,7 +125,7 @@ export function SetlistSongItem({
 
             {/* Panel de configuración expandible */}
             {showConfig && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
                     <ConfigControls
                         transposition={transposition}
                         fontSize={fontSize as any}
@@ -136,14 +136,14 @@ export function SetlistSongItem({
                     <div className="flex justify-end gap-3 mt-3">
                         <button
                             onClick={() => setShowConfig(false)}
-                            className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                            className="px-3 py-1 text-sm text-app-muted hover:bg-[var(--color-border)] rounded-lg transition"
                         >
                             Cancelar
                         </button>
                         <button
                             onClick={handleSaveConfig}
                             disabled={updating}
-                            className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition disabled:opacity-50"
+                            className="px-3 py-1 text-sm app-button rounded-lg disabled:opacity-50"
                         >
                             {updating ? 'Guardando...' : 'Guardar'}
                         </button>
