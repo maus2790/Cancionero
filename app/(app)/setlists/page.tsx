@@ -21,7 +21,9 @@ import {
 import { useTitle } from '@/lib/TitleContext';
 import toast from 'react-hot-toast';
 import { getSetlistAppearance } from '@/lib/setlistAppearance';
-
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
+import { getOfflineSetlists, getOfflineSongs } from '@/lib/offline-db';
 const setlistIcons = {
     music: Music, guitar: Guitar, headphones: Headphones,
     mic: MicVocal, disc: Disc3, radio: Radio,
@@ -61,6 +63,9 @@ export default function SetlistsPage() {
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
 
+    const { isOnline } = useNetworkStatus();
+    const { isSectionOffline } = useOfflineMode();
+
     // Close menu when clicking outside
     useEffect(() => {
         const handleOutside = (e: MouseEvent) => {
@@ -73,6 +78,14 @@ export default function SetlistsPage() {
     }, []);
 
     const loadSetlists = async () => {
+        if (!isOnline && isSectionOffline('setlists')) {
+            const offlineData = await getOfflineSetlists();
+            setSetlists(offlineData);
+            setPublicSetlists([]);
+            setPageLoading(false);
+            return;
+        }
+
         const user = await getCurrentUser();
         setIsGuest(user?.provider === 'guest');
 
@@ -94,8 +107,12 @@ export default function SetlistsPage() {
         setTitle('Mis Setlists');
         setShowBack(false);
         loadSetlists();
-        getSongs('', 1, 2000).then(d => setAllSongs(d.items));
-    }, [setTitle, setShowBack]);
+        if (isOnline || !isSectionOffline('setlists')) {
+            getSongs('', 1, 2000).then(d => setAllSongs(d.items));
+        } else {
+            getOfflineSongs().then(d => setAllSongs(d));
+        }
+    }, [setTitle, setShowBack, isOnline]);
 
     const handleEdit = async (list: any) => {
         setEditingList(list);

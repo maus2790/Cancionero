@@ -26,7 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <TitleProvider>
       <ThemeColorUpdater />
-      <div className="h-[100dvh] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      <div className="h-[100dvh] flex flex-col bg-app overflow-hidden">
         <Header onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
         <div className="flex flex-1 overflow-hidden relative">
           {!isMobile && !hideSidebar && <Sidebar isOpen={true} />}

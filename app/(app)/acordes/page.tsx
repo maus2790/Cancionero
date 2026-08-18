@@ -12,6 +12,9 @@ import { getCurrentUser } from '@/app/actions/auth';
 import { canCreateContent, canManageContent, type ContentUser } from '@/lib/permissions';
 import { ChordFormModal } from '@/components/ChordFormModal';
 import { getChordDisplayName, NOTE_OPTIONS, normalizeNote } from '@/lib/constants';
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
+import { getOfflineChords } from '@/lib/offline-db';
 
 export default function ChordsPage() {
   const { setTitle, setShowBack } = useTitle();
@@ -32,11 +35,19 @@ export default function ChordsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingChord, setEditingChord] = useState<any>(null);
 
+  const { isOnline } = useNetworkStatus();
+  const { isSectionOffline } = useOfflineMode();
+
   const loadChords = async () => {
     setLoading(true);
     try {
-      const data = await getAllChords();
-      setChordsList(data);
+      if (!isOnline && isSectionOffline('chords')) {
+        const offlineData = await getOfflineChords();
+        setChordsList(offlineData);
+      } else {
+        const data = await getAllChords();
+        setChordsList(data);
+      }
     } catch (error) {
       console.error('Error loading chords:', error);
     } finally {
@@ -47,7 +58,7 @@ export default function ChordsPage() {
   useEffect(() => {
     loadChords();
     getCurrentUser().then(setCurrentUser);
-  }, []);
+  }, [isOnline]);
 
   const canCreate = canCreateContent(currentUser);
 

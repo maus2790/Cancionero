@@ -11,6 +11,9 @@ import { getCurrentUser } from '@/app/actions/auth';
 import { SongCard } from '@/components/SongCard';
 import { useAudioCleanup } from '@/hooks/useAudioCleanup';
 import toast from 'react-hot-toast';
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
+import { getOfflineFavorites, getOfflineSetlists } from '@/lib/offline-db';
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -25,15 +28,31 @@ export default function FavoritesPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
   useAudioCleanup(audioRef);
+  
+  const { isOnline } = useNetworkStatus();
+  const { isSectionOffline } = useOfflineMode();
 
   useEffect(() => {
     setTitle('Canciones Favoritas');
     setShowBack(false);
     loadData();
-  }, [setTitle, setShowBack]);
+  }, [setTitle, setShowBack, isOnline]);
 
   const loadData = async () => {
     setLoading(true);
+    
+    if (!isOnline && isSectionOffline('favorites')) {
+        setIsAuthenticated(true);
+        const [favs, lists] = await Promise.all([
+            getOfflineFavorites(),
+            getOfflineSetlists().catch(() => [])
+        ]);
+        setFavorites(favs);
+        setUserSetlists(lists);
+        setLoading(false);
+        return;
+    }
+
     // Verificar autenticación
     const user = await getCurrentUser();
     setIsAuthenticated(!!user);

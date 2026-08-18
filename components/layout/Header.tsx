@@ -21,6 +21,10 @@ import { useTheme } from '@/lib/ThemeProvider';
 import { useRouter, usePathname } from 'next/navigation';
 import { handleLogout, getCurrentUser } from '@/app/actions/auth';
 import { useTitle } from '@/lib/TitleContext';
+import { WifiOff } from 'lucide-react';
+import { OfflineModal } from '@/components/OfflineModal';
+import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
+import { clearAllOfflineData } from '@/lib/offline-db';
 
 export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
     const { theme, toggleTheme } = useTheme();
@@ -35,6 +39,8 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
 
     // ✅ NUEVO
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [offlineModalOpen, setOfflineModalOpen] = useState(false);
+    const { config: offlineConfig } = useOfflineMode();
 
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +86,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
     }, []);
 
     const handleLogoutClick = async () => {
+        await clearAllOfflineData();
         await handleLogout();
         router.push('/login');
     };
@@ -108,20 +115,21 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                             : Home;
 
     return (
-        <header className="bg-sky-50 dark:bg-slate-900 border-b border-sky-100 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
+        <>
+        <header className="app-glass bg-app-surface border-b sticky top-0 z-50 shadow-sm">
             <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
                 <div className="flex items-center gap-3">
                     {showBack ? (
                         <button
                             onClick={onBack}
-                            className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition"
+                            className="text-app-muted hover:bg-black/5 dark:hover:bg-white/5 p-2 rounded-lg transition"
                             aria-label="Volver"
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
                     ) : pathname.startsWith('/admin') ? (
                         <button
-                            className="block md:hidden text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition"
+                            className="block md:hidden text-app-muted hover:bg-black/5 dark:hover:bg-white/5 p-2 rounded-lg transition"
                             onClick={onToggleSidebar}
                             aria-label="Toggle sidebar"
                         >
@@ -133,7 +141,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-sm">
                             <HeaderIcon className="w-4 h-4" />
                         </div>
-                        <h1 className="text-xl font-bold text-blue-700 dark:text-sky-300 truncate max-w-[130px] sm:max-w-xs">
+                        <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-300 dark:to-blue-400 truncate max-w-[130px] sm:max-w-xs">
                             {title}
                         </h1>
                     </div>
@@ -147,8 +155,19 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                     )}
 
                     <button
+                        onClick={() => setOfflineModalOpen(true)}
+                        className="relative p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+                        aria-label="Modo Offline"
+                    >
+                        <WifiOff className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                        {offlineConfig.isEnabled && (
+                            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                        )}
+                    </button>
+
+                    <button
                         onClick={toggleTheme}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
                         aria-label="Toggle theme"
                     >
                         {theme === 'dark' ? (
@@ -161,7 +180,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                     <div className="relative" ref={menuRef}>
                         <button
                             onClick={toggleUserMenu}
-                            className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition focus:outline-none"
+                            className="flex items-center gap-2 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition focus:outline-none"
                         >
                             {/* ✅ AVATAR ACTUALIZADO */}
                             <div className="w-8 h-8 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
@@ -179,17 +198,17 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                         </button>
 
                         {userMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 overflow-hidden">
-                                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                                    <p className="text-sm font-semibold text-gray-800 dark:text-white">{userName}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{userRoleDisplay}</p>
+                            <div className="absolute right-0 mt-2 w-56 app-card rounded-xl shadow-lg py-1 z-50 overflow-hidden">
+                                <div className="px-4 py-3 border-b">
+                                    <p className="text-sm font-semibold text-app">{userName}</p>
+                                    <p className="text-xs text-app-muted">{userRoleDisplay}</p>
                                 </div>
                                 <button
                                     onClick={() => {
                                         setUserMenuOpen(false);
                                         router.push('/perfil');
                                     }}
-                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-app hover:bg-black/5 dark:hover:bg-white/5 transition"
                                 >
                                     <User className="w-4 h-4" /> Perfil
                                 </button>
@@ -199,7 +218,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                                             setUserMenuOpen(false);
                                             router.push('/admin');
                                         }}
-                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-app hover:bg-black/5 dark:hover:bg-white/5 transition"
                                     >
                                         <Shield className="w-4 h-4" /> Panel de Admin
                                     </button>
@@ -209,7 +228,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                                         setUserMenuOpen(false);
                                         toggleTheme();
                                     }}
-                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-app hover:bg-black/5 dark:hover:bg-white/5 transition"
                                 >
                                     {theme === 'dark' ? (
                                         <>
@@ -226,7 +245,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                                         setUserMenuOpen(false);
                                         handleLogoutClick();
                                     }}
-                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700"
+                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/5 transition border-t"
                                 >
                                     <LogOut className="w-4 h-4" /> Cerrar sesión
                                 </button>
@@ -236,5 +255,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
                 </div>
             </div>
         </header>
+        <OfflineModal isOpen={offlineModalOpen} onClose={() => setOfflineModalOpen(false)} />
+        </>
     );
 }

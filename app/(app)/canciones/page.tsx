@@ -13,7 +13,9 @@ import { useAudioCleanup } from '@/hooks/useAudioCleanup';
 import toast from 'react-hot-toast';
 import { getCurrentUser } from '@/app/actions/auth';
 import { canCreateContent, type ContentUser } from '@/lib/permissions';
-
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
+import { getOfflineSongs } from '@/lib/offline-db';
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const STYLES = ['Adoración', 'Gozo', 'Contemporánea', 'Balada', 'Ritmo', 'Tradicional', 'Otro'];
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -44,6 +46,8 @@ export default function SongsPage() {
     const [currentUser, setCurrentUser] = useState<ContentUser | null>(null);
     const [userHasSongs, setUserHasSongs] = useState(false);
     useAudioCleanup(audioRef);
+    const { isOnline } = useNetworkStatus();
+    const { isSectionOffline } = useOfflineMode();
     const limit = 10;
 
     useEffect(() => {
@@ -71,6 +75,8 @@ export default function SongsPage() {
                 getArtists(),
                 getStyles(),
             ]);
+
+
             setArtists(artistsData.filter(a => a !== null));
             setStyles(stylesData.filter(s => s !== null));
         };
@@ -79,7 +85,7 @@ export default function SongsPage() {
 
     useEffect(() => {
         loadSongs();
-    }, [search, page, selectedArtist, selectedKey, selectedStyle, selectedLetter, onlyMySongs]);
+    }, [search, page, selectedArtist, selectedKey, selectedStyle, selectedLetter, onlyMySongs, isOnline]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -98,6 +104,26 @@ export default function SongsPage() {
         if (selectedKey) filters.key = selectedKey;
         if (selectedStyle) filters.style = selectedStyle;
         if (onlyMySongs) filters.mine = true;
+
+        if (!isOnline && isSectionOffline('songs')) {
+            // Modo offline: leer de IndexedDB
+            const offlineSongs = await getOfflineSongs();
+            let filtered = offlineSongs;
+            
+            if (search) filtered = filtered.filter(s => s.title.toLowerCase().includes(search.toLowerCase()));
+            if (selectedArtist) filtered = filtered.filter(s => s.artist === selectedArtist);
+            if (selectedKey) filtered = filtered.filter(s => s.key === selectedKey);
+            if (selectedStyle) filtered = filtered.filter(s => s.style === selectedStyle);
+            if (selectedLetter) filtered = filtered.filter(s => s.title.toUpperCase().startsWith(selectedLetter));
+            
+            const offset = (page - 1) * limit;
+            const paginated = filtered.slice(offset, offset + limit);
+            
+            setSongs(paginated);
+            setTotalPages(Math.ceil(filtered.length / limit));
+            setLoading(false);
+            return;
+        }
 
         if (selectedLetter) {
             const data = await getSongs(search, page, limit, filters);

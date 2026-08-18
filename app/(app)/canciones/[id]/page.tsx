@@ -14,7 +14,9 @@ import { useTitle } from '@/lib/TitleContext';
 import { useAudioCleanup } from '@/hooks/useAudioCleanup';
 import toast from 'react-hot-toast';
 import { canCreateContent, canManageContent, type ContentUser } from '@/lib/permissions';
-
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { useOfflineMode } from '@/lib/hooks/useOfflineMode';
+import { getOfflineSongById, getOfflineSetlists } from '@/lib/offline-db';
 // Opciones de tamaño de fuente
 const FONT_SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
 type FontSize = typeof FONT_SIZES[number];
@@ -71,6 +73,8 @@ export default function SongDetailPage() {
     const [savingChordPositions, setSavingChordPositions] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     useAudioCleanup(audioRef);
+    const { isOnline } = useNetworkStatus();
+    const { isSectionOffline } = useOfflineMode();
 
     const fontSize = FONT_SIZES[fontSizeIndex];
     const fontSizeClass = FONT_SIZE_CLASSES[fontSize];
@@ -78,6 +82,20 @@ export default function SongDetailPage() {
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
+
+            if (!isOnline && isSectionOffline('songs')) {
+                const songData = await getOfflineSongById(Number(id));
+                setSong(songData);
+                try {
+                    setChordOffsets(songData?.chordPositions ? JSON.parse(songData.chordPositions) : {});
+                } catch {
+                    setChordOffsets({});
+                }
+                setIsAuthenticated(true);
+                setLoading(false);
+                return;
+            }
+
             const [songData, user] = await Promise.all([
                 getSongById(Number(id)),
                 getCurrentUser()
@@ -93,17 +111,22 @@ export default function SongDetailPage() {
             setLoading(false);
         };
         loadData();
-    }, [id]);
+    }, [id, isOnline]);
 
     useEffect(() => {
         if (isAuthenticated) {
             const loadSetlists = async () => {
+                if (!isOnline && isSectionOffline('setlists')) {
+                    const lists = await getOfflineSetlists();
+                    setUserSetlists(lists);
+                    return;
+                }
                 const lists = await getUserSetlists();
                 setUserSetlists(lists);
             };
             loadSetlists();
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, isOnline]);
 
     useEffect(() => {
         if (song) {
@@ -153,14 +176,21 @@ export default function SongDetailPage() {
                     onClick={handleHeaderPlayer}
                     className="p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center justify-center"
                     aria-label={isPlayerOpen ? 'Detener reproducción' : 'Reproducir'}
+                    disabled={isBuffering}
                 >
-                    {isPlayerOpen ? <Square className="w-5 h-5" /> : <Play className="w-6 h-6" />}
+                    {isBuffering ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
+                    ) : isPlayerOpen ? (
+                        <Square className="w-5 h-5" />
+                    ) : (
+                        <Play className="w-6 h-6" />
+                    )}
                 </button>
             );
         } else {
             setHeaderRight(null);
         }
-    }, [song, isPlayerOpen, setHeaderRight]);
+    }, [song, isPlayerOpen, isBuffering, setHeaderRight]);
 
     const makeVisible = useCallback(() => {
         setIsVisible(true);

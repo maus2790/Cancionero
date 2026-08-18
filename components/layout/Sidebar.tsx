@@ -62,8 +62,8 @@ export function Sidebar({ isOpen }: SidebarProps) {
         <aside
             className={`
                 fixed left-0 top-16 bottom-0
-                bg-white dark:bg-gray-800
-                border-r border-gray-200 dark:border-gray-700
+                bg-app-surface
+                border-r
                 overflow-y-auto transition-all duration-300
                 ${isOpen ? 'w-64' : 'w-0'}
             `}
@@ -76,16 +76,16 @@ export function Sidebar({ isOpen }: SidebarProps) {
                     const isActive = href === '/'
                         ? pathname === '/' || pathname === '/dashboard'
                         : pathname === href;
-                    
+
                     let baseClasses = 'flex items-center gap-3 px-4 py-3 rounded-lg transition ';
                     if (isSpecial) {
-                        baseClasses += 'bg-gradient-to-r from-sky-600 to-blue-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5';
+                        baseClasses += 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5';
                     } else if (isBack) {
-                        baseClasses += 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 mt-4 border-t border-gray-200 dark:border-gray-700 pt-3';
+                        baseClasses += 'text-app-muted hover:bg-black/5 dark:hover:bg-white/5 mt-4 border-t pt-3';
                     } else if (isActive) {
-                        baseClasses += 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400';
+                        baseClasses += 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400';
                     } else {
-                        baseClasses += 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700';
+                        baseClasses += 'text-app-muted hover:bg-black/5 dark:hover:bg-white/5';
                     }
 
                     return (
